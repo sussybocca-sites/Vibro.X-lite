@@ -10,7 +10,7 @@ export default async function handler(req, res) {
   try {
     // 1️⃣ Get session
     const cookies = req.headers.cookie ? cookie.parse(req.headers.cookie) : {};
-    const sessionToken = cookies.session_token;
+    const sessionToken = cookies['__Host-session_secure'];
 
     if (!sessionToken) return res.status(401).json({ error: 'Not authenticated' });
 
