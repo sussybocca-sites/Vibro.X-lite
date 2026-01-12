@@ -88,15 +88,17 @@ export default async function handler(req, res) {
 
   try {
     const ip = req.headers['x-forwarded-for'] || req.headers['client-ip'] || 'unknown';
-    const {
-      email,
-      password,
-      remember_me,
-      captcha_token,
-      google,
-      fingerprint,
-      verification_code
-    } = req.body;
+    const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
+
+const {
+  email,
+  password,
+  remember_me,
+  captcha_token,
+  google,
+  fingerprint,
+  verification_code
+} = body;
 
     // Google login shortcut
     if (google) {
