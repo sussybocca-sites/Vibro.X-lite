@@ -93,17 +93,19 @@ export const handler = async (event) => {
       const { error: coverError } = await supabase.storage.from('covers').upload(coverFilename, coverBuffer, { contentType: 'image/png', upsert: false });
       if (coverError) return resolve({ statusCode: 500, body: coverError.message });
 
-      // Insert into database with title
-      const { error: insertError } = await supabase.from('videos').insert([{
-        user_id: userId,
-        video_url: videoFilename,
-        cover_url: coverFilename,
-        title: videoTitle,
-        original_filename: originalVideoName,
-        created_at: new Date()
-      }]);
+      // Insert into database with title + MIME + size
+const { error: insertError } = await supabase.from('videos').insert([{
+  user_id: userId,
+  video_url: videoFilename,
+  cover_url: coverFilename,
+  title: videoTitle,
+  original_filename: originalVideoName,
+  created_at: new Date(),
+  mime_type: 'video/mp4',
+  size: videoBuffer.length
+}]);
 
-      if (insertError) return resolve({ statusCode: 500, body: insertError.message });
+if (insertError) return resolve({ statusCode: 500, body: insertError.message });
 
       resolve({ statusCode: 200, body: JSON.stringify({ message: 'Upload successful!' }) });
     });
