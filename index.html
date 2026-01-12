@@ -42,6 +42,11 @@
     .comment-user { font-weight:bold; font-size:0.85rem; display:flex; align-items:center; gap:0.5rem; }
     .comment-text { font-size:0.85rem; margin-left:2rem; }
 
+    .new-comment { display:flex; gap:0.5rem; margin-top:0.5rem; }
+    .new-comment input { flex:1; padding:0.5rem; border-radius:6px; border:none; background:#2a2a2a; color:#fff; }
+    .new-comment button { padding:0.5rem 1rem; border:none; border-radius:6px; background:#0077cc; color:#fff; cursor:pointer; font-weight:bold; }
+    .new-comment button:hover { background:#005fa3; }
+
     #videoModal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.95); justify-content:center; align-items:center; z-index:999; }
     #videoModal video { width:90%; max-height:95%; border-radius:12px; box-shadow:0 0 25px #000; }
     #videoModal button { position:absolute; top:20px; right:20px; padding:12px 18px; font-size:16px; cursor:pointer; background:#0077cc; border:none; border-radius:6px; color:#fff; }
@@ -140,7 +145,7 @@ document.getElementById('uploadBtn').addEventListener('click', async () => {
   } finally { progressBar.style.display='none'; }
 });
 
-// Render videos (comments are taken from view-videos)
+// Render videos
 function renderVideos(videos) {
   const list = document.getElementById('videosList');
   const searchTerm = document.getElementById('searchInput').value.toLowerCase();
@@ -169,6 +174,10 @@ function renderVideos(videos) {
       </div>
       <button class="shareBtn">Share Video</button>
       <div class="commentsSection"></div>
+      <div class="new-comment">
+        <input type="text" placeholder="Write a comment...">
+        <button>Post</button>
+      </div>
     `;
     list.appendChild(div);
 
@@ -188,7 +197,6 @@ function renderVideos(videos) {
       navigator.clipboard.writeText(video.videoUrl).then(()=>alert('Video URL copied!')).catch(()=>alert('Failed.'));
     });
 
-    // Render existing comments from video object
     const commentsDiv = div.querySelector('.commentsSection');
     (video.comments||[]).forEach(c=>{
       const cDiv = document.createElement('div');
@@ -201,6 +209,43 @@ function renderVideos(videos) {
         <div class="comment-text">${c.text}</div>
       `;
       commentsDiv.appendChild(cDiv);
+    });
+
+    const postBtn = div.querySelector('.new-comment button');
+    const input = div.querySelector('.new-comment input');
+    postBtn.addEventListener('click', async () => {
+      const text = input.value.trim();
+      if (!text) return alert('Enter a comment!');
+      const sessionToken = getSessionCookie();
+      if (!sessionToken) return alert('You must be logged in to comment');
+
+      try {
+        const res = await fetch('/api/add-comment', {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + sessionToken
+          },
+          body: JSON.stringify({ videoId: video.id, text })
+        });
+        if (!res.ok) { const txt = await res.text(); return alert('Comment failed: '+txt); }
+
+        const newComment = await res.json();
+        const cDiv = document.createElement('div');
+        cDiv.className='comment';
+        cDiv.innerHTML=`
+          <div class="comment-user">
+            <img src="${newComment.user.avatar_url || 'https://via.placeholder.com/24'}" alt="avatar">
+            <span>${newComment.user.username || 'You'} (${newComment.user.email || ''})</span>
+          </div>
+          <div class="comment-text">${newComment.text}</div>
+        `;
+        commentsDiv.appendChild(cDiv);
+        input.value='';
+      } catch(err) {
+        console.error(err);
+        alert('Failed to post comment');
+      }
     });
   });
 
