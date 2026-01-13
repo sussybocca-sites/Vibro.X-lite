@@ -142,27 +142,57 @@ function renderVideos(videos){
 
     div.querySelector('.shareBtn').addEventListener('click',()=>{ navigator.clipboard.writeText(video.videoUrl).then(()=>alert('Copied!')).catch(()=>alert('Failed.')); });
 
-    // Render existing comments
-    const commentsDiv=div.querySelector('.commentsSection');
-    (video.comments||[]).forEach(c=>{
-      const cDiv=document.createElement('div'); cDiv.className='comment';
-      cDiv.innerHTML=`<div class="comment-user"><img src="${c.user?.avatar_url||'https://via.placeholder.com/24'}"><span>${c.user?.username||'User'}</span></div><div class="comment-text">${c.text}</div>`;
-      commentsDiv.appendChild(cDiv);
-    });
+   // Render existing comments
+const commentsDiv = div.querySelector('.commentsSection');
+(video.comments || []).forEach(c => {
+  const username = c.user?.username || c.user?.name || 'Anonymous';
+  const avatar = c.user?.avatar_url || 'https://via.placeholder.com/24';
+  
+  const cDiv = document.createElement('div');
+  cDiv.className = 'comment';
+  cDiv.innerHTML = `
+    <div class="comment-user">
+      <img src="${avatar}">
+      <span>${username}</span>
+    </div>
+    <div class="comment-text">${c.text}</div>
+  `;
+  commentsDiv.appendChild(cDiv);
+});
 
     // Add new comment
     const newInput=div.querySelector('.new-comment input'), newBtn=div.querySelector('.new-comment button');
-    newBtn.addEventListener('click',async ()=>{
-      const text=newInput.value.trim(); if(!text) return;
-      try{
-        const res=await fetch(`/api/view-videos?videoId=${video.id}`, {method:'POST', headers:{'Content-Type':'application/json'}, credentials:'include', body:JSON.stringify({text})});
-        if(res.ok){ const c=await res.json(); const cDiv=document.createElement('div'); cDiv.className='comment';
-          cDiv.innerHTML=`<div class="comment-user"><img src="${c.user?.avatar_url||'https://via.placeholder.com/24'}"><span>${c.user?.username||'User'}</span></div><div class="comment-text">${c.text}</div>`;
-          commentsDiv.appendChild(cDiv); newInput.value=''; }
-        else alert('Failed to post comment');
-      }catch(err){ alert('Error: '+err.message); }
+    newBtn.addEventListener('click', async () => {
+  const text = newInput.value.trim();
+  if (!text) return;
+  try {
+    const res = await fetch(`/api/view-videos?videoId=${video.id}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ text })
     });
-  });
+    if (res.ok) {
+      const c = await res.json();
+      const username = c.user?.username || c.user?.name || 'Anonymous';
+      const avatar = c.user?.avatar_url || 'https://via.placeholder.com/24';
+
+      const cDiv = document.createElement('div');
+      cDiv.className = 'comment';
+      cDiv.innerHTML = `
+        <div class="comment-user">
+          <img src="${avatar}">
+          <span>${username}</span>
+        </div>
+        <div class="comment-text">${c.text}</div>
+      `;
+      commentsDiv.appendChild(cDiv);
+      newInput.value = '';
+    } else alert('Failed to post comment');
+  } catch (err) {
+    alert('Error: ' + err.message);
+  }
+});
 
   displayedCount += batch.length;
   document.getElementById('totalVideos').innerText=`Showing ${displayedCount} of ${filtered.length} videos`;
