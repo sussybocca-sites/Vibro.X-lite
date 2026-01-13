@@ -609,8 +609,9 @@ async function likeVideo(videoId, isLiked) {
         if (res.ok) {
             const data = await res.json();
             // Update the UI
-            const likeBtn = document.querySelector(`.like-btn[data-video-id="${videoId}"]`);
-            const likeCount = document.querySelector(`.like-count[data-video-id="${videoId}"]`);
+            const videoItem = document.querySelector(`.video-item .like-btn[data-video-id="${videoId}"]`)?.closest('.video-item');
+            const likeBtn = videoItem?.querySelector('.like-btn');
+            const likeCount = videoItem?.querySelector('.like-count');
             
             if (likeBtn && likeCount) {
                 if (data.liked) {
@@ -628,7 +629,9 @@ async function likeVideo(videoId, isLiked) {
     } catch (err) {
         showNotification('Failed to like video', 'error');
     }
-}// Upload video - UPDATED FOR SIGNED URLS
+}
+
+// Upload video
 document.getElementById('uploadBtn').addEventListener('click', async () => {
     if (!currentUser) {
         showNotification('Please sign in to upload videos', 'error');
@@ -844,7 +847,7 @@ function renderVideos(videos) {
             
             ${currentUser ? `
                 <div class="new-comment">
-                    <input type="text" placeholder="Write a comment..." data-video-id="${video.id}">
+                    <input type="text" placeholder="Write a comment..." id="comment-input-${video.id}">
                     <button onclick="postComment('${video.id}')">Post</button>
                 </div>
             ` : '<p style="text-align: center; opacity: 0.7;">Sign in to comment</p>'}
@@ -920,14 +923,22 @@ function shareVideo(url) {
     }
 }
 
-// Post comment function
+// Post comment function - FIXED
 async function postComment(videoId) {
     if (!currentUser) {
         showNotification('Please sign in to comment', 'error');
         return;
     }
     
-    const input = document.querySelector(`.new-comment input[data-video-id="${videoId}"]`);
+    // Find the video item
+    const videoItem = document.querySelector(`.video-item .like-btn[data-video-id="${videoId}"]`)?.closest('.video-item');
+    
+    if (!videoItem) {
+        showNotification('Could not find video', 'error');
+        return;
+    }
+    
+    const input = videoItem.querySelector(`#comment-input-${videoId}`);
     const text = input?.value.trim();
     
     if (!text) {
@@ -945,7 +956,7 @@ async function postComment(videoId) {
         
         if (res.ok) { 
             const comment = await res.json();
-            const commentsDiv = document.querySelector(`.video-item [data-video-id="${videoId}"]`)?.closest('.video-item')?.querySelector('.commentsSection');
+            const commentsDiv = videoItem.querySelector('.commentsSection');
             
             if (commentsDiv) {
                 const cDiv = document.createElement('div'); 
@@ -964,11 +975,21 @@ async function postComment(videoId) {
             }
             
             input.value = '';
+            
+            // Update comment count
+            const commentStat = videoItem.querySelector('.stat:nth-child(2) span');
+            if (commentStat) {
+                const currentCount = parseInt(commentStat.textContent) || 0;
+                commentStat.textContent = `${currentCount + 1} comments`;
+            }
+            
             showNotification('Comment posted!');
         } else {
-            showNotification('Failed to post comment', 'error');
+            const errorText = await res.text();
+            showNotification('Failed to post comment: ' + errorText, 'error');
         }
     } catch(err) { 
+        console.error('Comment error:', err);
         showNotification('Error: ' + err.message, 'error');
     }
 }
