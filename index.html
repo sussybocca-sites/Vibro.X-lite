@@ -628,9 +628,7 @@ async function likeVideo(videoId, isLiked) {
     } catch (err) {
         showNotification('Failed to like video', 'error');
     }
-}
-
-// Upload video
+}// Upload video - UPDATED FOR SIGNED URLS
 document.getElementById('uploadBtn').addEventListener('click', async () => {
     if (!currentUser) {
         showNotification('Please sign in to upload videos', 'error');
@@ -650,45 +648,119 @@ document.getElementById('uploadBtn').addEventListener('click', async () => {
     const progressBar = document.getElementById('progressBar'); 
     progressBar.style.display = 'block'; 
     progressBar.value = 0;
-    
-    const formData = new FormData();
-    formData.append('video', videoFile);
-    formData.append('cover', coverFile);
-    formData.append('title', title);
-    if (description) formData.append('description', description);
 
     try {
-        const xhr = new XMLHttpRequest();
-        xhr.open('POST', '/api/upload-video', true);
-        xhr.withCredentials = true;
+        // STEP 1: Prepare upload (get signed URLs)
+        progressBar.value = 10;
         
-        xhr.upload.onprogress = e => { 
-            if(e.lengthComputable) progressBar.value = (e.loaded / e.total) * 100; 
-        };
+        const prepareRes = await fetch('/api/upload-video', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({
+                action: 'prepare',
+                videoInfo: {
+                    title: title,
+                    description: description,
+                    aiGenerated: false
+                },
+                fileInfo: {
+                    video: {
+                        name: videoFile.name,
+                        type: videoFile.type,
+                        size: videoFile.size
+                    },
+                    cover: {
+                        name: coverFile.name,
+                        type: coverFile.type
+                    }
+                }
+            })
+        });
         
-        xhr.onload = () => { 
-            progressBar.style.display = 'none'; 
-            if(xhr.status >= 200 && xhr.status < 300) {
-                showNotification('Video uploaded successfully!');
-                document.getElementById('videoTitle').value = '';
-                document.getElementById('videoDescription').value = '';
-                document.getElementById('videoFile').value = '';
-                document.getElementById('coverFile').value = '';
-                loadVideos(true); 
-            } else {
-                showNotification('Upload failed: ' + xhr.responseText, 'error');
-            }
-        };
+        if (!prepareRes.ok) {
+            const errorText = await prepareRes.text();
+            throw new Error(`Failed to prepare upload: ${errorText}`);
+        }
         
-        xhr.onerror = () => {
+        const prepareData = await prepareRes.json();
+        if (!prepareData.success) {
+            throw new Error(prepareData.error || 'Upload preparation failed');
+        }
+        
+        progressBar.value = 30;
+        
+        // STEP 2: Upload video directly to Supabase (bypasses Vercel limit)
+        const videoUploadRes = await fetch(prepareData.uploadInfo.signedUrls.video.signedUrl, {
+            method: 'PUT',
+            body: videoFile,
+            headers: { 'Content-Type': videoFile.type }
+        });
+        
+        if (!videoUploadRes.ok) {
+            throw new Error('Failed to upload video to storage');
+        }
+        
+        progressBar.value = 60;
+        
+        // STEP 3: Upload cover directly to Supabase
+        const coverUploadRes = await fetch(prepareData.uploadInfo.signedUrls.cover.signedUrl, {
+            method: 'PUT',
+            body: coverFile,
+            headers: { 'Content-Type': coverFile.type }
+        });
+        
+        if (!coverUploadRes.ok) {
+            console.warn('Cover upload failed, but video uploaded successfully');
+        }
+        
+        progressBar.value = 80;
+        
+        // STEP 4: Complete the upload (update database)
+        const completeRes = await fetch('/api/upload-video', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({
+                action: 'complete',
+                videoId: prepareData.uploadInfo.videoId,
+                success: true
+            })
+        });
+        
+        if (!completeRes.ok) {
+            const errorText = await completeRes.text();
+            throw new Error(`Failed to complete upload: ${errorText}`);
+        }
+        
+        const completeData = await completeRes.json();
+        if (!completeData.success) {
+            throw new Error(completeData.error || 'Upload completion failed');
+        }
+        
+        progressBar.value = 100;
+        
+        // Success!
+        showNotification('Video uploaded successfully!');
+        
+        // Reset form
+        document.getElementById('videoTitle').value = '';
+        document.getElementById('videoDescription').value = '';
+        document.getElementById('videoFile').value = '';
+        document.getElementById('coverFile').value = '';
+        
+        // Hide progress bar after a delay
+        setTimeout(() => {
             progressBar.style.display = 'none';
-            showNotification('Upload failed: Network error', 'error');
-        };
+            progressBar.value = 0;
+            loadVideos(true); // Reload videos to show the new one
+        }, 1000);
         
-        xhr.send(formData);
     } catch (err) {
+        console.error('Upload error:', err);
+        showNotification(`Upload failed: ${err.message}`, 'error');
         progressBar.style.display = 'none';
-        showNotification('Upload failed: ' + err.message, 'error');
+        progressBar.value = 0;
     }
 });
 
