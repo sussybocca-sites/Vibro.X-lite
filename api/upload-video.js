@@ -1,127 +1,215 @@
+// pages/api/upload-video.js (UPDATED)
 import { createClient } from '@supabase/supabase-js';
-import busboy from 'busboy';
+import cookie from 'cookie';
 import { v4 as uuidv4 } from 'uuid';
 
-const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
-const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
+const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE_KEY
+);
 
-export const config = { api: { bodyParser: false } };
+const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB
+const ALLOWED_VIDEO_TYPES = ['video/mp4', 'video/webm', 'video/quicktime'];
+const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
 
-async function verifySession(cookieHeader) {
-  if (!cookieHeader) return null;
-  const cookies = cookieHeader.split(';').map(c => c.trim());
-  const sessionCookie = cookies.find(c => c.startsWith('__Host-session_secure='));
-  if (!sessionCookie) return null;
-
-  const sessionToken = sessionCookie.split('=')[1];
-  const { data: session } = await supabase
-    .from('sessions')
-    .select('*')
-    .eq('session_token', sessionToken)
-    .maybeSingle();
-
-  if (!session || !session.verified || new Date(session.expires_at) < new Date()) return null;
-  return session.user_email;
-}
+export const config = {
+  api: {
+    bodyParser: false,
+  },
+};
 
 export default async function handler(req, res) {
-  if (req.method !== 'POST') return res.status(405).send('Method Not Allowed');
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
 
-  const cookieHeader = req.headers.cookie || '';
-  const userEmail = await verifySession(cookieHeader);
-  if (!userEmail) return res.status(401).send('Unauthorized');
+  try {
+    // Verify session
+    const cookies = cookie.parse(req.headers.cookie || '');
+    const sessionToken = cookies['__Host-session_secure'];
 
-  const { data: user } = await supabase.from('users').select('id').eq('email', userEmail).maybeSingle();
-  if (!user) return res.status(401).send('User not found');
-  const userId = user.id;
+    if (!sessionToken) {
+      return res.status(401).json({ error: 'Not authenticated' });
+    }
 
-  const bb = busboy({ headers: req.headers, limits: { fileSize: MAX_FILE_SIZE } });
+    const { data: session } = await supabase
+      .from('sessions')
+      .select('user_id, expires_at')
+      .eq('session_token', sessionToken)
+      .maybeSingle();
 
-  let videoBuffer = null;
-  let coverBuffer = null;
-  let videoFilename = '';
-  let coverFilename = '';
-  let originalVideoName = '';
-  let originalCoverName = '';
-  let videoTitle = '';
+    if (!session || new Date(session.expires_at) < new Date()) {
+      return res.status(401).json({ error: 'Session expired or invalid' });
+    }
 
-  bb.on('field', (fieldname, val) => {
-    if (fieldname === 'title') videoTitle = val.trim();
-  });
+    const userId = session.user_id;
 
-  bb.on('file', (fieldname, file, info) => {
-    const safeName = info.filename.replace(/[^a-z0-9_\-\.]/gi, '_');
-    const chunks = [];
-    let totalSize = 0;
-
-    file.on('data', (chunk) => {
-      totalSize += chunk.length;
-      if (totalSize > MAX_FILE_SIZE) {
-        file.resume();
-        return res.status(400).send('File too large');
-      }
-      chunks.push(chunk);
-    });
-
-    file.on('end', () => {
-      const buffer = Buffer.concat(chunks);
-      if (fieldname === 'video') {
-        originalVideoName = info.filename;
-        videoFilename = `${Date.now()}_${uuidv4()}_${safeName}`;
-        videoBuffer = buffer;
-      } else if (fieldname === 'cover') {
-        originalCoverName = info.filename;
-        coverFilename = `${Date.now()}_${uuidv4()}_${safeName}`;
-        coverBuffer = buffer;
+    // Parse multipart form data
+    const Busboy = require('busboy');
+    const busboy = Busboy({ 
+      headers: req.headers,
+      limits: {
+        fileSize: MAX_FILE_SIZE,
+        files: 2
       }
     });
-  });
 
-  bb.on('error', (err) => res.status(500).send('Upload error: ' + err.message));
+    let videoFile = null;
+    let coverFile = null;
+    let videoTitle = '';
+    let description = '';
+    let tags = '';
 
-  bb.on('finish', async () => {
-    if (!videoBuffer) return res.status(400).send('No video uploaded.');
-    if (!coverBuffer) return res.status(400).send('Cover art is required.');
-    if (!videoTitle) return res.status(400).send('Video title is required.');
-
-    // Upload video
-    const { error: videoError } = await supabase.storage.from('videos').upload(videoFilename, videoBuffer, {
-      contentType: 'video/mp4',
-      upsert: false,
+    busboy.on('field', (name, value) => {
+      if (name === 'title') videoTitle = value.trim();
+      if (name === 'description') description = value.trim();
+      if (name === 'tags') tags = value.trim();
     });
-    if (videoError) {
-      console.error('Video upload failed:', videoError);
-      return res.status(500).send(videoError.message);
-    }
 
-    // Upload cover
-    const { error: coverError } = await supabase.storage.from('covers').upload(coverFilename, coverBuffer, {
-      contentType: 'image/png',
-      upsert: false,
+    busboy.on('file', (name, file, info) => {
+      const { filename, mimeType } = info;
+      const chunks = [];
+      
+      file.on('data', (chunk) => {
+        chunks.push(chunk);
+      });
+
+      file.on('end', async () => {
+        const buffer = Buffer.concat(chunks);
+        
+        if (name === 'video') {
+          if (!ALLOWED_VIDEO_TYPES.includes(mimeType)) {
+            throw new Error('Invalid video format');
+          }
+          videoFile = {
+            buffer,
+            filename,
+            mimeType,
+            size: buffer.length
+          };
+        } else if (name === 'cover') {
+          if (!ALLOWED_IMAGE_TYPES.includes(mimeType)) {
+            throw new Error('Invalid image format');
+          }
+          coverFile = {
+            buffer,
+            filename,
+            mimeType,
+            size: buffer.length
+          };
+        }
+      });
+
+      file.on('error', (err) => {
+        console.error('File stream error:', err);
+        throw new Error('File upload failed');
+      });
     });
-    if (coverError) {
-      console.error('Cover upload failed:', coverError);
-      return res.status(500).send(coverError.message);
-    }
 
-    // Insert into database
-    const { error: insertError } = await supabase.from('videos').insert([{
-      user_id: userId,
-      video_url: videoFilename,
-      cover_url: coverFilename,
-      title: videoTitle,
-      original_filename: originalVideoName,
-      created_at: new Date(),
-      mime_type: 'video/mp4',
-      size: videoBuffer.length,
-    }]);
-    if (insertError) {
-      console.error('Database insert failed:', insertError);
-      return res.status(500).send(insertError.message);
-    }
+    busboy.on('finish', async () => {
+      try {
+        // Validate required fields
+        if (!videoFile) {
+          return res.status(400).json({ error: 'No video uploaded' });
+        }
+        if (!coverFile) {
+          return res.status(400).json({ error: 'Cover image is required' });
+        }
+        if (!videoTitle || videoTitle.length < 3) {
+          return res.status(400).json({ error: 'Video title must be at least 3 characters' });
+        }
 
-    res.status(200).json({ message: 'Upload successful!' });
-  });
+        // Generate unique filenames
+        const videoExt = videoFile.filename.split('.').pop();
+        const coverExt = coverFile.filename.split('.').pop();
+        const videoId = uuidv4();
+        const videoName = `${userId}/${videoId}.${videoExt}`;
+        const coverName = `${userId}/${videoId}.${coverExt}`;
 
-  req.pipe(bb);
+        // Upload video to storage
+        const { error: videoUploadError } = await supabase.storage
+          .from('videos')
+          .upload(videoName, videoFile.buffer, {
+            contentType: videoFile.mimeType,
+            cacheControl: '3600'
+          });
+
+        if (videoUploadError) {
+          console.error('Video upload failed:', videoUploadError);
+          return res.status(500).json({ error: 'Failed to upload video' });
+        }
+
+        // Upload cover to storage
+        const { error: coverUploadError } = await supabase.storage
+          .from('covers')
+          .upload(coverName, coverFile.buffer, {
+            contentType: coverFile.mimeType,
+            cacheControl: '3600'
+          });
+
+        if (coverUploadError) {
+          console.error('Cover upload failed:', coverUploadError);
+          await supabase.storage.from('videos').remove([videoName]);
+          return res.status(500).json({ error: 'Failed to upload cover' });
+        }
+
+        // Create video record in database
+        const { data: video, error: dbError } = await supabase
+          .from('videos')
+          .insert({
+            id: videoId,
+            user_id: userId,
+            title: videoTitle,
+            description: description,
+            video_url: videoName,
+            cover_url: coverName,
+            original_filename: videoFile.filename,
+            mime_type: videoFile.mimeType,
+            size: videoFile.size,
+            views: 0,
+            tags: tags.split(',').map(tag => tag.trim()).filter(tag => tag),
+            created_at: new Date().toISOString()
+          })
+          .select()
+          .single();
+
+        if (dbError) {
+          console.error('Database insert failed:', dbError);
+          await supabase.storage.from('videos').remove([videoName]);
+          await supabase.storage.from('covers').remove([coverName]);
+          return res.status(500).json({ error: 'Failed to save video metadata' });
+        }
+
+        // Update user's video count
+        await supabase
+          .from('users')
+          .update({ 
+            video_count: supabase.raw('video_count + 1'),
+            last_upload: new Date().toISOString()
+          })
+          .eq('id', userId);
+
+        return res.status(200).json({
+          success: true,
+          message: 'Video uploaded successfully',
+          video: {
+            id: videoId,
+            title: videoTitle,
+            videoUrl: videoName,
+            coverUrl: coverName
+          }
+        });
+
+      } catch (err) {
+        console.error('Upload processing error:', err);
+        return res.status(500).json({ error: err.message || 'Upload failed' });
+      }
+    });
+
+    req.pipe(busboy);
+
+  } catch (err) {
+    console.error('Upload handler error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
 }
