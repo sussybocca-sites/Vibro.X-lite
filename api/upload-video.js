@@ -33,62 +33,99 @@ export const config = {
 };
 
 export default async function handler(req, res) {
+  console.log('=== UPLOAD VIDEO API CALLED ===');
+  console.log('Method:', req.method);
+  console.log('Content-Type:', req.headers['content-type']);
+  console.log('Origin:', req.headers.origin);
+  
   // Set CORS headers
-  res.setHeader('Access-Control-Allow-Credentials', true);
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
   res.setHeader('Access-Control-Allow-Origin', req.headers.origin || '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
   
   if (req.method === 'OPTIONS') {
+    console.log('✅ CORS preflight request');
     return res.status(200).end();
   }
 
   if (req.method !== 'POST') {
+    console.error('❌ Method not allowed:', req.method);
     return res.status(405).json({ success: false, error: 'Method not allowed' });
   }
 
   try {
+    console.log('🔍 Starting upload process...');
+    
     // Verify session
     const cookies = cookie.parse(req.headers.cookie || '');
     const sessionToken = cookies['__Host-session_secure'] || cookies.session_secure;
 
+    console.log('🔍 Session token present:', !!sessionToken);
+    if (sessionToken) {
+      console.log('🔍 Session token length:', sessionToken.length);
+    }
+
     if (!sessionToken) {
+      console.error('❌ No session token found in cookies');
+      console.log('❌ All cookies:', Object.keys(cookies));
       return res.status(401).json({ success: false, error: 'Not authenticated' });
     }
 
     // Get session
+    console.log('🔍 Checking session in database...');
     const { data: session, error: sessionError } = await supabase
       .from('sessions')
       .select('user_email, expires_at')
       .eq('session_token', sessionToken)
       .maybeSingle();
 
-    if (sessionError || !session) {
+    if (sessionError) {
+      console.error('❌ Session database error:', sessionError);
       return res.status(401).json({ success: false, error: 'Session expired or invalid' });
     }
 
+    if (!session) {
+      console.error('❌ No session found in database for token');
+      return res.status(401).json({ success: false, error: 'Session expired or invalid' });
+    }
+
+    console.log('✅ Session found for user:', session.user_email);
+    console.log('🔍 Session expires at:', session.expires_at);
+
     if (new Date(session.expires_at) < new Date()) {
+      console.error('❌ Session expired');
       await supabase.from('sessions').delete().eq('session_token', sessionToken);
       return res.status(401).json({ success: false, error: 'Session expired' });
     }
 
     // Get user
+    console.log('🔍 Fetching user data...');
     const { data: user, error: userError } = await supabase
       .from('users')
       .select('id, email, username, video_count')
       .eq('email', session.user_email)
       .maybeSingle();
 
-    if (userError || !user) {
+    if (userError) {
+      console.error('❌ User database error:', userError);
       return res.status(401).json({ success: false, error: 'User not found' });
     }
 
+    if (!user) {
+      console.error('❌ User not found in database');
+      return res.status(401).json({ success: false, error: 'User not found' });
+    }
+
+    console.log('✅ User authenticated:', user.email, 'ID:', user.id);
     const userId = user.id;
     
     // Check Content-Type to determine how to handle the request
     const contentType = req.headers['content-type'] || '';
+    console.log('🔍 Content-Type detected:', contentType);
     
     if (contentType.includes('application/json')) {
+      console.log('📦 Handling JSON request (signed URL system)');
       // ===== JSON REQUEST (new signed URL system) =====
       let body = '';
       
@@ -98,12 +135,19 @@ export default async function handler(req, res) {
       
       req.on('end', async () => {
         try {
-          const { videoInfo, fileInfo, action } = JSON.parse(body);
+          console.log('📦 JSON body received:', body.substring(0, 500) + '...');
+          const data = JSON.parse(body);
+          const { videoInfo, fileInfo, action } = data;
+          
+          console.log('📦 Action:', action);
+          console.log('📦 Video info:', videoInfo);
+          console.log('📦 File info present:', !!fileInfo);
           
           if (action === 'prepare') {
             // === STEP 1: PREPARE UPLOAD (Generate signed URLs) ===
             
             if (!videoInfo || !videoInfo.title) {
+              console.error('❌ Missing video title');
               return res.status(400).json({ 
                 success: false, 
                 error: 'Video title is required' 
@@ -111,13 +155,19 @@ export default async function handler(req, res) {
             }
 
             if (!fileInfo || !fileInfo.video || !fileInfo.video.name || !fileInfo.video.type) {
+              console.error('❌ Missing video file info');
               return res.status(400).json({ 
                 success: false, 
                 error: 'Video file information is required' 
               });
             }
 
+            console.log('📦 Video file type:', fileInfo.video.type);
+            console.log('📦 Video file name:', fileInfo.video.name);
+            console.log('📦 Video file size:', fileInfo.video.size);
+
             if (!ALLOWED_VIDEO_TYPES.includes(fileInfo.video.type)) {
+              console.error('❌ Invalid video format:', fileInfo.video.type);
               return res.status(400).json({ 
                 success: false, 
                 error: `Invalid video format: ${fileInfo.video.type}` 
@@ -125,6 +175,7 @@ export default async function handler(req, res) {
             }
 
             if (fileInfo.cover && !ALLOWED_IMAGE_TYPES.includes(fileInfo.cover.type)) {
+              console.error('❌ Invalid cover format:', fileInfo.cover.type);
               return res.status(400).json({ 
                 success: false, 
                 error: `Invalid image format: ${fileInfo.cover.type}` 
@@ -142,27 +193,37 @@ export default async function handler(req, res) {
               coverName = `${userId}/${videoId}.${coverExt}`;
             }
 
+            console.log('📦 Generated video filename:', videoName);
+            console.log('📦 Generated cover filename:', coverName);
+
             // Generate signed URLs
+            console.log('🔑 Generating signed URL for video...');
             const videoSignedUrl = await supabase.storage
               .from('videos')
               .createSignedUploadUrl(videoName);
 
             if (videoSignedUrl.error) {
-              console.error('Failed to generate video signed URL:', videoSignedUrl.error);
+              console.error('❌ Failed to generate video signed URL:', videoSignedUrl.error);
               return res.status(500).json({ 
                 success: false, 
                 error: 'Failed to generate upload URL' 
               });
             }
 
+            console.log('✅ Video signed URL generated');
+
             let coverSignedUrl = null;
             if (coverName) {
+              console.log('🔑 Generating signed URL for cover...');
               const coverUrlResult = await supabase.storage
                 .from('covers')
                 .createSignedUploadUrl(coverName);
               
               if (!coverUrlResult.error) {
                 coverSignedUrl = coverUrlResult.data;
+                console.log('✅ Cover signed URL generated');
+              } else {
+                console.warn('⚠️ Failed to generate cover signed URL:', coverUrlResult.error);
               }
             }
 
@@ -182,6 +243,7 @@ export default async function handler(req, res) {
               created_at: new Date().toISOString()
             };
 
+            console.log('💾 Creating video record in database...');
             const { data: video, error: dbError } = await supabase
               .from('videos')
               .insert(videoData)
@@ -189,12 +251,15 @@ export default async function handler(req, res) {
               .single();
 
             if (dbError) {
-              console.error('Database insert failed:', dbError);
+              console.error('❌ Database insert failed:', dbError);
               return res.status(500).json({ 
                 success: false, 
                 error: 'Failed to save video metadata'
               });
             }
+
+            console.log('✅ Video record created:', videoId);
+            console.log('✅ Returning signed URLs to client');
 
             return res.status(200).json({
               success: true,
@@ -216,17 +281,22 @@ export default async function handler(req, res) {
 
           } else if (action === 'complete') {
             // === STEP 2: COMPLETE UPLOAD (Update with real URLs) ===
-            
-            const { videoId, success, error: uploadError } = JSON.parse(body);
+            console.log('📦 Completing upload...');
+            const { videoId, success, error: uploadError } = data;
             
             if (!videoId) {
+              console.error('❌ Missing video ID');
               return res.status(400).json({ 
                 success: false, 
                 error: 'Video ID is required' 
               });
             }
 
+            console.log('📦 Video ID:', videoId);
+            console.log('📦 Success flag:', success);
+
             if (!success) {
+              console.error('❌ Upload failed on client side:', uploadError);
               await supabase.from('videos').delete().eq('id', videoId);
               return res.status(400).json({ 
                 success: false, 
@@ -235,19 +305,25 @@ export default async function handler(req, res) {
             }
 
             // Get the video
-            const { data: video } = await supabase
+            console.log('🔍 Fetching video from database...');
+            const { data: video, error: videoFetchError } = await supabase
               .from('videos')
               .select('user_id, original_filename')
               .eq('id', videoId)
               .single();
 
-            if (!video) {
+            if (videoFetchError || !video) {
+              console.error('❌ Video not found in database:', videoFetchError);
               return res.status(404).json({ success: false, error: 'Video not found' });
             }
 
             // Reconstruct filenames
             const videoName = `${video.user_id}/${videoId}.${video.original_filename.split('.').pop().toLowerCase()}`;
             const coverName = `${video.user_id}/${videoId}.jpg`;
+
+            console.log('🔗 Getting public URLs...');
+            console.log('🔗 Video path:', videoName);
+            console.log('🔗 Cover path:', coverName);
 
             // Get public URLs
             const { data: videoUrlData } = supabase.storage
@@ -261,7 +337,11 @@ export default async function handler(req, res) {
             const videoPublicUrl = videoUrlData.publicUrl;
             const coverPublicUrl = coverUrlData.publicUrl;
 
+            console.log('🔗 Video URL:', videoPublicUrl);
+            console.log('🔗 Cover URL:', coverPublicUrl);
+
             // Update video with real URLs
+            console.log('💾 Updating video with public URLs...');
             const { data: updatedVideo, error: updateError } = await supabase
               .from('videos')
               .update({
@@ -273,7 +353,7 @@ export default async function handler(req, res) {
               .single();
 
             if (updateError) {
-              console.error('Failed to update video URLs:', updateError);
+              console.error('❌ Failed to update video URLs:', updateError);
               return res.status(500).json({ 
                 success: false, 
                 error: 'Failed to update video metadata' 
@@ -281,6 +361,7 @@ export default async function handler(req, res) {
             }
 
             // Update user's video count
+            console.log('👤 Updating user video count...');
             await supabase
               .from('users')
               .update({ 
@@ -289,6 +370,7 @@ export default async function handler(req, res) {
               })
               .eq('id', userId);
 
+            console.log('✅ Upload completed successfully!');
             return res.status(200).json({
               success: true,
               message: 'Video uploaded successfully',
@@ -297,21 +379,27 @@ export default async function handler(req, res) {
             });
 
           } else {
+            console.error('❌ Invalid action:', action);
             return res.status(400).json({ 
               success: false, 
               error: 'Invalid action' 
             });
           }
         } catch (err) {
-          console.error('JSON parsing error:', err);
+          console.error('❌ JSON parsing error:', err);
+          console.error('❌ Error stack:', err.stack);
           return res.status(400).json({ 
             success: false, 
-            error: 'Invalid JSON' 
+            error: 'Invalid JSON: ' + err.message 
           });
         }
       });
       
+      // IMPORTANT: Return here to prevent the handler from ending prematurely
+      return;
+      
     } else if (contentType.includes('multipart/form-data')) {
+      console.log('📁 Handling multipart/form-data request (legacy system)');
       // ===== MULTIPART/FORM-DATA REQUEST (original frontend) =====
       return new Promise((resolve) => {
         const bb = busboy({
@@ -328,12 +416,14 @@ export default async function handler(req, res) {
         let description = '';
 
         bb.on('field', (name, value) => {
+          console.log('📝 Form field:', name, '=', value.substring(0, 100));
           if (name === 'title') videoTitle = value.trim();
           if (name === 'description') description = value.trim();
         });
 
         bb.on('file', (name, file, info) => {
           const { filename, mimeType } = info;
+          console.log('📁 File upload:', name, filename, mimeType);
           const chunks = [];
           
           file.on('data', (chunk) => {
@@ -342,9 +432,11 @@ export default async function handler(req, res) {
 
           file.on('end', () => {
             const buffer = Buffer.concat(chunks);
+            console.log('📁 File received:', name, 'size:', buffer.length, 'bytes');
             
             if (name === 'video') {
               if (!ALLOWED_VIDEO_TYPES.includes(mimeType)) {
+                console.error('❌ Invalid video format:', mimeType);
                 file.resume();
                 return resolve(res.status(400).json({ 
                   success: false, 
@@ -353,6 +445,7 @@ export default async function handler(req, res) {
               }
               
               if (buffer.length > MAX_FILE_SIZE) {
+                console.error('❌ Video too large:', buffer.length, 'bytes');
                 file.resume();
                 return resolve(res.status(400).json({ 
                   success: false, 
@@ -369,6 +462,7 @@ export default async function handler(req, res) {
               
             } else if (name === 'cover') {
               if (!ALLOWED_IMAGE_TYPES.includes(mimeType)) {
+                console.error('❌ Invalid image format:', mimeType);
                 file.resume();
                 return resolve(res.status(400).json({ 
                   success: false, 
@@ -386,7 +480,7 @@ export default async function handler(req, res) {
           });
 
           file.on('error', (err) => {
-            console.error('File stream error:', err);
+            console.error('❌ File stream error:', err);
             file.resume();
             resolve(res.status(500).json({ 
               success: false, 
@@ -397,7 +491,14 @@ export default async function handler(req, res) {
 
         bb.on('finish', async () => {
           try {
+            console.log('✅ Form parsing complete');
+            console.log('📝 Title:', videoTitle);
+            console.log('📝 Description length:', description.length);
+            console.log('📁 Video file present:', !!videoFile);
+            console.log('📁 Cover file present:', !!coverFile);
+
             if (!videoFile) {
+              console.error('❌ No video uploaded');
               return resolve(res.status(400).json({ 
                 success: false, 
                 error: 'No video uploaded' 
@@ -405,6 +506,7 @@ export default async function handler(req, res) {
             }
             
             if (!coverFile) {
+              console.error('❌ No cover image uploaded');
               return resolve(res.status(400).json({ 
                 success: false, 
                 error: 'Cover image is required' 
@@ -412,6 +514,7 @@ export default async function handler(req, res) {
             }
             
             if (!videoTitle || videoTitle.length < 3) {
+              console.error('❌ Invalid title:', videoTitle);
               return resolve(res.status(400).json({ 
                 success: false, 
                 error: 'Video title must be at least 3 characters' 
@@ -426,7 +529,12 @@ export default async function handler(req, res) {
             const coverExt = coverFile.filename.split('.').pop().toLowerCase();
             const coverName = `${userId}/${videoId}.${coverExt}`;
 
+            console.log('📦 Generated video ID:', videoId);
+            console.log('📁 Video storage path:', videoName);
+            console.log('📁 Cover storage path:', coverName);
+
             // 1. Upload video to storage
+            console.log('☁️ Uploading video to Supabase storage...');
             const { error: videoUploadError } = await supabase.storage
               .from('videos')
               .upload(videoName, videoFile.buffer, {
@@ -436,14 +544,17 @@ export default async function handler(req, res) {
               });
 
             if (videoUploadError) {
-              console.error('Video upload failed:', videoUploadError);
+              console.error('❌ Video upload failed:', videoUploadError);
               return resolve(res.status(500).json({ 
                 success: false, 
                 error: 'Failed to upload video to storage' 
               }));
             }
 
+            console.log('✅ Video uploaded to storage');
+
             // 2. Upload cover
+            console.log('☁️ Uploading cover to Supabase storage...');
             const { error: coverUploadError } = await supabase.storage
               .from('covers')
               .upload(coverName, coverFile.buffer, {
@@ -453,13 +564,15 @@ export default async function handler(req, res) {
               });
 
             if (coverUploadError) {
-              console.error('Cover upload failed:', coverUploadError);
+              console.error('❌ Cover upload failed:', coverUploadError);
               await supabase.storage.from('videos').remove([videoName]);
               return resolve(res.status(500).json({ 
                 success: false, 
                 error: 'Failed to upload cover image' 
               }));
             }
+
+            console.log('✅ Cover uploaded to storage');
 
             // Get public URLs
             const { data: videoUrlData } = supabase.storage
@@ -472,6 +585,9 @@ export default async function handler(req, res) {
             
             const videoPublicUrl = videoUrlData.publicUrl;
             const coverPublicUrl = coverUrlData.publicUrl;
+
+            console.log('🔗 Video URL:', videoPublicUrl);
+            console.log('🔗 Cover URL:', coverPublicUrl);
 
             // 3. Create video record in database
             const videoData = {
@@ -488,6 +604,7 @@ export default async function handler(req, res) {
               created_at: new Date().toISOString()
             };
 
+            console.log('💾 Creating database record...');
             const { data: video, error: dbError } = await supabase
               .from('videos')
               .insert(videoData)
@@ -495,7 +612,7 @@ export default async function handler(req, res) {
               .single();
 
             if (dbError) {
-              console.error('Database insert failed:', dbError);
+              console.error('❌ Database insert failed:', dbError);
               await supabase.storage.from('videos').remove([videoName]);
               await supabase.storage.from('covers').remove([coverName]);
               
@@ -506,6 +623,7 @@ export default async function handler(req, res) {
             }
 
             // 4. Update user's video count
+            console.log('👤 Updating user video count...');
             await supabase
               .from('users')
               .update({ 
@@ -514,6 +632,7 @@ export default async function handler(req, res) {
               })
               .eq('id', userId);
 
+            console.log('✅ Upload completed successfully!');
             return resolve(res.status(200).json({
               success: true,
               message: 'Video uploaded successfully',
@@ -531,27 +650,30 @@ export default async function handler(req, res) {
             }));
 
           } catch (err) {
-            console.error('Upload processing error:', err);
+            console.error('❌ Upload processing error:', err);
+            console.error('❌ Error stack:', err.stack);
             return resolve(res.status(500).json({ 
               success: false, 
-              error: 'Upload processing failed'
+              error: 'Upload processing failed: ' + err.message
             }));
           }
         });
 
         bb.on('error', (err) => {
-          console.error('Busboy error:', err);
+          console.error('❌ Busboy error:', err);
+          console.error('❌ Error stack:', err.stack);
           resolve(res.status(500).json({ 
             success: false, 
-            error: 'Form parsing failed' 
+            error: 'Form parsing failed: ' + err.message 
           }));
         });
 
+        console.log('📥 Piping request to busboy...');
         req.pipe(bb);
       });
 
     } else {
-      // === UNSUPPORTED CONTENT TYPE ===
+      console.error('❌ Unsupported Content-Type:', contentType);
       return res.status(400).json({ 
         success: false, 
         error: 'Unsupported Content-Type. Use multipart/form-data or application/json' 
@@ -559,10 +681,11 @@ export default async function handler(req, res) {
     }
 
   } catch (err) {
-    console.error('Upload handler error:', err);
+    console.error('❌❌❌ UPLOAD HANDLER FATAL ERROR:', err);
+    console.error('❌❌❌ Error stack:', err.stack);
     return res.status(500).json({ 
       success: false, 
-      error: 'Internal server error'
+      error: 'Internal server error: ' + err.message
     });
   }
 }
