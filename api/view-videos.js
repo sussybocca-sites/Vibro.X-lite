@@ -1,3 +1,4 @@
+// pages/api/view-videos.js (UPDATED)
 import { createClient } from '@supabase/supabase-js';
 import cookie from 'cookie';
 
@@ -8,34 +9,46 @@ const supabase = createClient(
 
 export default async function handler(req, res) {
   try {
-    // 1️⃣ Get session from cookie
+    let userId = null;
+    
+    // Check if user is authenticated
     const cookies = req.headers.cookie ? cookie.parse(req.headers.cookie) : {};
     const sessionToken = cookies['__Host-session_secure'];
+    
+    if (sessionToken) {
+      const { data: session } = await supabase
+        .from('sessions')
+        .select('user_id, expires_at')
+        .eq('session_token', sessionToken)
+        .maybeSingle();
 
-    if (!sessionToken) {
-      return res.status(401).json({ error: 'Not authenticated' });
+      if (session && new Date(session.expires_at) > new Date()) {
+        userId = session.user_id;
+      }
     }
 
-    const { data: session } = await supabase
-      .from('sessions')
-      .select('user_id, expires_at')
-      .eq('session_token', sessionToken)
-      .maybeSingle();
-
-    if (!session || new Date(session.expires_at) < new Date()) {
-      return res.status(401).json({ error: 'Session expired or invalid' });
-    }
-
-    const userId = session.user_id;
-
-    // 2️⃣ Handle POST: add a new comment
+    // Handle POST: add a new comment
     if (req.method === 'POST') {
+      if (!userId) {
+        return res.status(401).json({ error: 'Not authenticated' });
+      }
+
       const { videoId } = req.query;
       const { text } = req.body;
 
       if (!text) return res.status(400).json({ error: 'Comment text required' });
       if (!videoId) return res.status(400).json({ error: 'Video ID required' });
 
+      // Verify video exists
+      const { data: video } = await supabase
+        .from('videos')
+        .select('id, user_id')
+        .eq('id', videoId)
+        .maybeSingle();
+
+      if (!video) return res.status(404).json({ error: 'Video not found' });
+
+      // Insert comment
       const { data: newComment, error } = await supabase
         .from('comments')
         .insert({
@@ -55,6 +68,21 @@ export default async function handler(req, res) {
 
       if (error) return res.status(500).json({ error: error.message });
 
+      // Send notification to video owner if not commenting on own video
+      if (video.user_id !== userId) {
+        await supabase
+          .from('notifications')
+          .insert({
+            user_id: video.user_id,
+            from_user_id: userId,
+            type: 'video_comment',
+            video_id: videoId,
+            message: 'commented on your video',
+            read: false,
+            created_at: new Date().toISOString()
+          });
+      }
+
       return res.status(200).json({
         id: newComment.id,
         text: newComment.comment_text,
@@ -63,37 +91,60 @@ export default async function handler(req, res) {
       });
     }
 
-    // 3️⃣ Handle GET: list videos with comments
+    // Handle GET: list videos with likes and views
     if (req.method === 'GET') {
-      // Load storage files
-      const { data: files, error: listError } = await supabase
-        .storage
+      // Get videos from database (not storage)
+      const { data: videos, error: videosError } = await supabase
         .from('videos')
-        .list('', { limit: 100, offset: 0 });
+        .select(`
+          id,
+          user_id,
+          title,
+          description,
+          video_url,
+          cover_url,
+          original_filename,
+          mime_type,
+          size,
+          views,
+          created_at,
+          users ( id, email, username, avatar_url, online )
+        `)
+        .order('created_at', { ascending: false })
+        .limit(100);
 
-      if (listError) return res.status(500).json({ error: listError.message });
-      if (!files || files.length === 0) return res.status(200).json([]);
+      if (videosError) return res.status(500).json({ error: videosError.message });
+      if (!videos || videos.length === 0) return res.status(200).json([]);
 
-      // Build response
+      // Build response with additional data
       const result = await Promise.all(
-        files.map(async (file) => {
-          const { data: video } = await supabase
-            .from('videos')
-            .select('id, user_id, created_at, cover_url, title, description, video_url')
-            .eq('video_url', file.name)
-            .maybeSingle();
+        videos.map(async (video) => {
+          // Get like count and check if user liked
+          const { count: likes } = await supabase
+            .from('likes')
+            .select('*', { count: 'exact', head: true })
+            .eq('video_id', video.id);
 
-          if (!video) return null;
+          let hasLiked = false;
+          if (userId) {
+            const { data: userLike } = await supabase
+              .from('likes')
+              .select('id')
+              .eq('user_id', userId)
+              .eq('video_id', video.id)
+              .maybeSingle();
+            hasLiked = !!userLike;
+          }
 
-          const { data: votes } = await supabase
-            .from('votes')
-            .select('id')
-            .eq('item_type', 'video')
-            .eq('item_id', video.id);
+          // Increment view count (only count once per session)
+          if (req.headers['x-view-increment'] === 'true') {
+            await supabase
+              .from('videos')
+              .update({ views: (video.views || 0) + 1 })
+              .eq('id', video.id);
+          }
 
-          const likes = votes?.length || 0;
-
-          // Safe signed URLs
+          // Get signed URLs
           let videoUrl = null;
           if (video.video_url) {
             const { data } = await supabase.storage
@@ -110,12 +161,7 @@ export default async function handler(req, res) {
             coverUrl = data?.signedUrl || null;
           }
 
-          const { data: user } = await supabase
-            .from('users')
-            .select('id, email, username, avatar_url, online')
-            .eq('id', video.user_id)
-            .maybeSingle();
-
+          // Get comments
           const { data: comments } = await supabase
             .from('comments')
             .select(`
@@ -125,7 +171,6 @@ export default async function handler(req, res) {
               comment_text,
               created_at,
               edited_at,
-              likes_count,
               users ( id, username, email, avatar_url )
             `)
             .eq('video_id', video.id)
@@ -133,14 +178,16 @@ export default async function handler(req, res) {
 
           return {
             id: video.id,
-            name: file.name,
+            name: video.video_url,
             title: video.title,
             description: video.description,
-            likes,
+            likes: likes || 0,
+            hasLiked,
+            views: video.views || 0,
             uploaded_at: video.created_at,
             videoUrl,
             coverUrl,
-            user,
+            user: video.users,
             comments: (comments || []).map(c => ({
               id: c.id,
               user_id: c.user_id,
@@ -148,17 +195,15 @@ export default async function handler(req, res) {
               text: c.comment_text,
               created_at: c.created_at,
               edited_at: c.edited_at,
-              likes: c.likes_count,
               user: c.users
             }))
           };
         })
       );
 
-      return res.status(200).json(result.filter(Boolean));
+      return res.status(200).json(result);
     }
 
-    // 4️⃣ Unsupported method
     return res.status(405).json({ error: 'Method not allowed' });
 
   } catch (err) {
