@@ -30,12 +30,39 @@ export default async function handler(req, res) {
       return res.status(401).json({ error: 'Session expired or invalid' });
     }
 
-    // Get user info
-    const { data: user, error: userError } = await supabase
-      .from('users')
-      .select('id, email, username, avatar_url, created_at, online, video_count, bio, location')
-      .eq('id', session.user_id)
-      .maybeSingle();
+    let user = null;
+    let userError = null;
+
+    // ATTEMPT 1: Try to find user by user_id (if it exists)
+    if (session.user_id) {
+      const result = await supabase
+        .from('users')
+        .select('id, email, username, avatar_url, created_at, online, video_count, bio, location')
+        .eq('id', session.user_id)
+        .maybeSingle();
+      user = result.data;
+      userError = result.error;
+    }
+
+    // ATTEMPT 2: If not found by ID or ID is null, try by email
+    if (!user && session.user_email) {
+      const result = await supabase
+        .from('users')
+        .select('id, email, username, avatar_url, created_at, online, video_count, bio, location')
+        .eq('email', session.user_email)
+        .maybeSingle();
+      user = result.data;
+      userError = result.error;
+
+      // If we found user by email but session has wrong/null user_id, FIX IT
+      if (user && (!session.user_id || session.user_id !== user.id)) {
+        console.log(`Fixing session ${sessionToken}: Updating user_id from ${session.user_id} to ${user.id}`);
+        await supabase
+          .from('sessions')
+          .update({ user_id: user.id })
+          .eq('session_token', sessionToken);
+      }
+    }
 
     if (userError || !user) {
       return res.status(404).json({ error: 'User not found' });
