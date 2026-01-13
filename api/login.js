@@ -228,11 +228,24 @@ export default async function handler(req, res) {
       console.error('Failed to delete pending verification:', deleteError);
     }
 
-    // Create session
+    // ==== CRITICAL FIX: Get user ID before creating session ====
+    const { data: userWithId, error: userIdError } = await supabase
+      .from('users')
+      .select('id')
+      .eq('email', email)
+      .single();
+
+    if (userIdError) {
+      console.error('Failed to fetch user ID:', userIdError);
+      return res.status(500).json({ success: false, error: 'Failed to create session' });
+    }
+
+    // ==== FIXED: Create session with BOTH user_id and user_email ====
     const session_token = generateEncryptedToken();
     const expiresInDays = remember_me ? 90 : 1;
 
     const { error: sessionError } = await supabase.from('sessions').insert({
+      user_id: userWithId.id,      // ← ADDED: Include the user's ID
       user_email: email,
       session_token,
       expires_at: new Date(Date.now() + expiresInDays * 24 * 60 * 60 * 1000),
