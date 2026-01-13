@@ -61,54 +61,63 @@ progress { width:100%; height:20px; margin-top:1rem; border-radius:10px; overflo
 
 <script>
 let videosCache = [], displayedCount = 0, pageSize = 10;
+let observer;
+const isMobile = /iPhone|iPad|Android/i.test(navigator.userAgent);
 
-// Open video modal
+// Modal functions
 function openModal(url){ const m=document.getElementById('videoModal'), v=document.getElementById('modalVideo'); v.src=url; m.style.display='flex'; v.play(); }
 function closeModal(){ const m=document.getElementById('videoModal'), v=document.getElementById('modalVideo'); v.pause(); v.src=''; m.style.display='none'; }
 
+// Mobile scroll autoplay
+function initObserver(){
+  if(!isMobile) return;
+  observer = new IntersectionObserver(entries=>{
+    entries.forEach(entry=>{
+      const v = entry.target;
+      if(entry.isIntersecting){ v.play().catch(()=>{}); } 
+      else { v.pause(); v.currentTime=0; }
+    });
+  }, { threshold: 0.7 });
+}
+
 // Upload video
-document.getElementById('uploadBtn').addEventListener('click', async ()=>{
+document.getElementById('uploadBtn').addEventListener('click', ()=>{
   const videoFile=document.getElementById('videoFile').files[0];
   const coverFile=document.getElementById('coverFile').files[0];
   const title=document.getElementById('videoTitle').value.trim();
-  if(!videoFile||!coverFile){ alert('Select video and cover.'); return; }
-  if(!title){ alert('Add a title.'); return; }
-  if(!videoFile.name.toLowerCase().endsWith('.mp4')){ alert('Only MP4 allowed.'); return; }
+  if(!videoFile||!coverFile||!title){ alert('All fields required'); return; }
 
   const progressBar=document.getElementById('progressBar'); progressBar.style.display='block'; progressBar.value=0;
-  const formData=new FormData(); formData.append('video',videoFile); formData.append('cover',coverFile); formData.append('title',title);
+  const formData=new FormData();
+  formData.append('video',videoFile);
+  formData.append('cover',coverFile);
+  formData.append('title',title);
 
-  try{
-    const xhr=new XMLHttpRequest(); xhr.open('POST','/api/upload-video',true); xhr.withCredentials=true;
-    xhr.upload.onprogress=e=>{ if(e.lengthComputable) progressBar.value=(e.loaded/e.total)*100; };
-    xhr.onload=()=>{ progressBar.style.display='none'; 
-      if(xhr.status>=200 && xhr.status<300){ const data=JSON.parse(xhr.responseText); 
-        document.getElementById('result').innerHTML=`Upload successful!<br><video controls poster="${data.coverUrl}"><source src="${data.videoUrl}" type="video/mp4"></video>`;
-        loadVideos(true);
-      } else alert('Upload failed: '+xhr.responseText);
-    };
-    xhr.onerror=()=>{ progressBar.style.display='none'; alert('Upload failed: Network error'); };
-    xhr.send(formData);
-  }catch(err){ progressBar.style.display='none'; alert('Upload failed: '+err.message); }
+  const xhr=new XMLHttpRequest();
+  xhr.open('POST','/api/upload-video',true);
+  xhr.withCredentials=true;
+  xhr.upload.onprogress=e=>{ if(e.lengthComputable) progressBar.value=(e.loaded/e.total)*100; };
+  xhr.onload=()=>{ progressBar.style.display='none'; if(xhr.status>=200 && xhr.status<300) loadVideos(true); else alert('Upload failed: '+xhr.responseText); };
+  xhr.onerror=()=>{ progressBar.style.display='none'; alert('Upload failed: Network error'); };
+  xhr.send(formData);
 });
 
 // Render videos
 function renderVideos(videos){
   const list=document.getElementById('videosList');
   const searchTerm=document.getElementById('searchInput').value.toLowerCase();
-  const filtered=videos.filter(v=>(v.user?.email?.toLowerCase().includes(searchTerm))||(v.user?.username?.toLowerCase().includes(searchTerm))||(v.name?.toLowerCase().includes(searchTerm)));
+  const filtered=videos.filter(v=> (v.user?.email||'').toLowerCase().includes(searchTerm) || (v.user?.username||'').toLowerCase().includes(searchTerm) || (v.name||'').toLowerCase().includes(searchTerm));
   const batch=filtered.slice(displayedCount,displayedCount+pageSize);
+
   batch.forEach(video=>{
     const div=document.createElement('div'); div.className='video-item';
     div.innerHTML=`
       <div class="user-info">
         <img src="${video.user?.avatar_url||'https://via.placeholder.com/36'}">
-        <span>${video.user?.username||'Unknown'} (${video.user?.email||'Unknown'})</span>
-        <span style="margin-left:auto; font-size:0.75rem; color:${video.user?.online?'#0f0':'#888'};">${video.user?.online?'Online':'Offline'}</span>
+        <span>${video.user?.username||'User'} (${video.user?.email||''})</span>
       </div>
-      <p style="margin:0 0 0.5rem 0; color:#aaa; font-size:0.85rem;">Uploaded: ${video.uploaded_at?new Date(video.uploaded_at).toLocaleString():'Unknown'}</p>
       <div style="position:relative;">
-        <video muted preload="metadata" poster="${video.coverUrl}" controls>
+        <video muted preload="metadata" poster="${video.coverUrl}" playsinline>
           <source src="${video.videoUrl}" type="video/mp4">
         </video>
         <span class="video-duration">--:--</span>
@@ -122,30 +131,40 @@ function renderVideos(videos){
     `;
     list.appendChild(div);
 
-    const vid=div.querySelector('video'), dur=div.querySelector('.video-duration');
+    const vid = div.querySelector('video'), dur = div.querySelector('.video-duration');
     vid.addEventListener('loadedmetadata',()=>{ dur.textContent=`${Math.floor(vid.duration/60)}:${Math.floor(vid.duration%60).toString().padStart(2,'0')}`; });
-    div.addEventListener('mouseenter',()=>{ vid.play(); dur.style.opacity='1'; });
-    div.addEventListener('mouseleave',()=>{ vid.pause(); vid.currentTime=0; dur.style.opacity='0'; });
-    vid.addEventListener('click',()=>openModal(video.videoUrl));
 
-    div.querySelector('.shareBtn').addEventListener('click',()=>{ navigator.clipboard.writeText(video.videoUrl).then(()=>alert('Video URL copied!')).catch(()=>alert('Failed.')); });
+    if(!isMobile){
+      div.addEventListener('mouseenter',()=>{ vid.play(); dur.style.opacity='1'; });
+      div.addEventListener('mouseleave',()=>{ vid.pause(); vid.currentTime=0; dur.style.opacity='0'; });
+      vid.addEventListener('click',()=>openModal(video.videoUrl));
+    } else { if(observer) observer.observe(vid); }
 
+    div.querySelector('.shareBtn').addEventListener('click',()=>{ navigator.clipboard.writeText(video.videoUrl).then(()=>alert('Copied!')).catch(()=>alert('Failed.')); });
+
+    // Render existing comments
     const commentsDiv=div.querySelector('.commentsSection');
-    (video.comments||[]).forEach(c=>{ const cDiv=document.createElement('div'); cDiv.className='comment'; cDiv.innerHTML=`<div class="comment-user"><img src="${c.user?.avatar_url||'https://via.placeholder.com/24'}"><span>${c.user?.username||'Unknown'} (${c.user?.email||''})</span></div><div class="comment-text">${c.text}</div>`; commentsDiv.appendChild(cDiv); });
+    (video.comments||[]).forEach(c=>{
+      const cDiv=document.createElement('div'); cDiv.className='comment';
+      cDiv.innerHTML=`<div class="comment-user"><img src="${c.user?.avatar_url||'https://via.placeholder.com/24'}"><span>${c.user?.username||'User'}</span></div><div class="comment-text">${c.text}</div>`;
+      commentsDiv.appendChild(cDiv);
+    });
 
-    // New comment
+    // Add new comment
     const newInput=div.querySelector('.new-comment input'), newBtn=div.querySelector('.new-comment button');
     newBtn.addEventListener('click',async ()=>{
       const text=newInput.value.trim(); if(!text) return;
       try{
         const res=await fetch(`/api/view-videos?videoId=${video.id}`, {method:'POST', headers:{'Content-Type':'application/json'}, credentials:'include', body:JSON.stringify({text})});
-        if(res.ok){ const c=await res.json(); const cDiv=document.createElement('div'); cDiv.className='comment'; cDiv.innerHTML=`<div class="comment-user"><img src="${c.user?.avatar_url||'https://via.placeholder.com/24'}"><span>${c.user?.username||'Unknown'} (${c.user?.email||''})</span></div><div class="comment-text">${c.text}</div>`; commentsDiv.appendChild(cDiv); newInput.value=''; } 
+        if(res.ok){ const c=await res.json(); const cDiv=document.createElement('div'); cDiv.className='comment';
+          cDiv.innerHTML=`<div class="comment-user"><img src="${c.user?.avatar_url||'https://via.placeholder.com/24'}"><span>${c.user?.username||'User'}</span></div><div class="comment-text">${c.text}</div>`;
+          commentsDiv.appendChild(cDiv); newInput.value=''; }
         else alert('Failed to post comment');
       }catch(err){ alert('Error: '+err.message); }
     });
   });
 
-  displayedCount+=batch.length;
+  displayedCount += batch.length;
   document.getElementById('totalVideos').innerText=`Showing ${displayedCount} of ${filtered.length} videos`;
   document.getElementById('loadMoreBtn').style.display=(displayedCount<filtered.length)?'block':'none';
 }
@@ -153,14 +172,13 @@ function renderVideos(videos){
 // Load videos
 async function loadVideos(reset=false){
   if(reset){ displayedCount=0; document.getElementById('videosList').innerHTML=''; }
-  if(!videosCache.length||reset){
-    try{ 
-      const res=await fetch('/api/view-videos',{method:'GET',credentials:'include'});
-      if(!res.ok){ alert('Failed to fetch videos: '+await res.text()); return; }
-      videosCache=(await res.json()).sort((a,b)=>new Date(b.uploaded_at)-new Date(a.uploaded_at));
-    }catch(err){ alert('Failed to fetch videos: '+err.message); return; }
-  }
-  renderVideos(videosCache);
+  try{
+    const res=await fetch('/api/view-videos',{method:'GET',credentials:'include'});
+    if(!res.ok){ alert('Failed: '+await res.text()); return; }
+    videosCache=await res.json();
+    if(!observer) initObserver();
+    renderVideos(videosCache);
+  }catch(err){ alert('Failed: '+err.message); }
 }
 
 window.addEventListener('DOMContentLoaded',()=>loadVideos());
