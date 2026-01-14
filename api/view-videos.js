@@ -1,4 +1,4 @@
-// pages/api/view-videos.js (UPDATED)
+// pages/api/view-videos.js (CORRECTED)
 import { createClient } from '@supabase/supabase-js';
 import cookie from 'cookie';
 
@@ -12,6 +12,7 @@ export default async function handler(req, res) {
     console.log('👀 View-videos API called, method:', req.method);
     
     let userId = null;
+    let userEmail = null;
     
     // Check if user is authenticated
     const cookies = req.headers.cookie ? cookie.parse(req.headers.cookie) : {};
@@ -22,13 +23,14 @@ export default async function handler(req, res) {
     if (sessionToken) {
       const { data: session } = await supabase
         .from('sessions')
-        .select('user_id, expires_at')
+        .select('user_id, user_email, expires_at')
         .eq('session_token', sessionToken)
         .maybeSingle();
 
       if (session && new Date(session.expires_at) > new Date()) {
         userId = session.user_id;
-        console.log('✅ User authenticated, ID:', userId);
+        userEmail = session.user_email;
+        console.log('✅ User authenticated, ID:', userId, 'Email:', userEmail);
       } else {
         console.log('❌ Session expired or invalid');
       }
@@ -55,7 +57,7 @@ export default async function handler(req, res) {
       // Verify video exists
       const { data: video } = await supabase
         .from('videos')
-        .select('id, user_id')
+        .select('id, user_id, views')
         .eq('id', videoId)
         .maybeSingle();
 
@@ -64,7 +66,7 @@ export default async function handler(req, res) {
       // Get user info for response
       const { data: user } = await supabase
         .from('users')
-        .select('id, username, avatar_url')
+        .select('id, username, avatar_url, email')
         .eq('id', userId)
         .single();
 
@@ -113,7 +115,7 @@ export default async function handler(req, res) {
     if (req.method === 'GET') {
       console.log('📹 GET request - fetching videos');
       
-      // Get videos from database (not storage)
+      // Get videos from database
       const { data: videos, error: videosError } = await supabase
         .from('videos')
         .select(`
@@ -149,66 +151,87 @@ export default async function handler(req, res) {
       const result = await Promise.all(
         videos.map(async (video, index) => {
           console.log(`📹 Processing video ${index + 1}/${videos.length}: ${video.title}`);
-          console.log(`📹 Video URL in DB: ${video.video_url}`);
-          console.log(`📹 Cover URL in DB: ${video.cover_url}`);
-
-          // Get like count and check if user liked
-          const { count: likes } = await supabase
+          
+          // GET LIKES COUNT - CORRECTED FOR YOUR SCHEMA
+          const { count: likes, error: likesError } = await supabase
             .from('likes')
             .select('*', { count: 'exact', head: true })
-            .eq('video_id', video.id);
+            .eq('target_id', video.id)        // Your schema uses target_id
+            .eq('target_type', 'video');      // Your schema uses target_type
 
+          if (likesError) {
+            console.error('❌ Likes count error:', likesError);
+          }
+
+          // CHECK IF USER LIKED - CORRECTED FOR YOUR SCHEMA
           let hasLiked = false;
-          if (userId) {
-            const { data: userLike } = await supabase
+          if (userEmail) {
+            const { data: userLike, error: userLikeError } = await supabase
               .from('likes')
               .select('id')
-              .eq('user_id', userId)
-              .eq('video_id', video.id)
+              .eq('target_id', video.id)        // Your schema uses target_id
+              .eq('target_type', 'video')       // Your schema uses target_type
+              .eq('user_email', userEmail)      // Your schema uses user_email
               .maybeSingle();
-            hasLiked = !!userLike;
+
+            if (!userLikeError) {
+              hasLiked = !!userLike;
+            }
           }
 
-          console.log(`📹 Likes: ${likes || 0}, User liked: ${hasLiked}`);
+          console.log(`📹 Likes: ${likes || 0}, User liked: ${hasLiked}, Views: ${video.views || 0}`);
 
-          // Increment view count (only count once per session)
-          if (req.headers['x-view-increment'] === 'true') {
-            console.log(`📹 Incrementing view count for video ${video.id}`);
-            await supabase
-              .from('videos')
-              .update({ views: (video.views || 0) + 1 })
-              .eq('id', video.id);
+          // INCREMENT VIEW COUNT - CORRECTED (always increment on GET)
+          // This ensures views are counted when someone watches the video
+          console.log(`📹 Incrementing view count for video ${video.id}`);
+          const { error: viewError } = await supabase
+            .from('videos')
+            .update({ 
+              views: (video.views || 0) + 1,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', video.id);
+
+          if (viewError) {
+            console.error('❌ View increment error:', viewError);
+          } else {
+            console.log(`✅ View count incremented for video ${video.id}`);
           }
 
-          // IMPORTANT: video.video_url is already a PUBLIC URL from upload-video.js
-          // We don't need to create signed URLs for public access
-          // Only use signed URLs if videos are in private buckets
-          
+          // Handle URLs
           let videoUrl = video.video_url;
           let coverUrl = video.cover_url;
           
-          // If URLs are relative paths (like "user-id/video-id.mp4"), create public URLs
+          // If URLs are relative paths, create public URLs
           if (videoUrl && !videoUrl.startsWith('http')) {
             console.log(`📹 Creating public URL for relative video path: ${videoUrl}`);
-            const { data: publicUrlData } = supabase.storage
-              .from('videos')
-              .getPublicUrl(videoUrl);
-            videoUrl = publicUrlData.publicUrl;
+            try {
+              const { data: publicUrlData } = supabase.storage
+                .from('videos')
+                .getPublicUrl(videoUrl);
+              videoUrl = publicUrlData.publicUrl;
+            } catch (error) {
+              console.error('❌ Error creating video URL:', error);
+            }
           }
           
           if (coverUrl && !coverUrl.startsWith('http')) {
             console.log(`📹 Creating public URL for relative cover path: ${coverUrl}`);
-            const { data: publicUrlData } = supabase.storage
-              .from('covers')
-              .getPublicUrl(coverUrl);
-            coverUrl = publicUrlData.publicUrl;
+            try {
+              const { data: publicUrlData } = supabase.storage
+                .from('covers')
+                .getPublicUrl(coverUrl);
+              coverUrl = publicUrlData.publicUrl;
+            } catch (error) {
+              console.error('❌ Error creating cover URL:', error);
+            }
           }
 
           console.log(`📹 Final video URL: ${videoUrl}`);
           console.log(`📹 Final cover URL: ${coverUrl}`);
 
           // Get comments
-          const { data: comments } = await supabase
+          const { data: comments, error: commentsError } = await supabase
             .from('comments')
             .select(`
               id,
@@ -222,6 +245,10 @@ export default async function handler(req, res) {
             .eq('video_id', video.id)
             .order('created_at', { ascending: true });
 
+          if (commentsError) {
+            console.error('❌ Comments fetch error:', commentsError);
+          }
+
           console.log(`📹 Comments: ${comments?.length || 0}`);
 
           return {
@@ -230,10 +257,10 @@ export default async function handler(req, res) {
             description: video.description,
             likes: likes || 0,
             hasLiked,
-            views: video.views || 0,
+            views: (video.views || 0) + 1, // Return incremented view count
             uploaded_at: video.created_at,
-            videoUrl,  // Already public URL
-            coverUrl,  // Already public URL
+            videoUrl,
+            coverUrl,
             user: video.users,
             comments: (comments || []).map(c => ({
               id: c.id,
