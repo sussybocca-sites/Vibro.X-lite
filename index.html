@@ -2216,7 +2216,7 @@ async function loadComments(reset = false) {
     
     try {
         const response = await fetch(
-            `/api/video-comments?videoId=${currentVideo.id}&sort=${sort}&limit=${COMMENTS_PER_PAGE}&offset=${page * COMMENTS_PER_PAGE}`,
+            `/api/view-videos?videoId=${currentVideo.id}&sort=${sort}&limit=${COMMENTS_PER_PAGE}&offset=${page * COMMENTS_PER_PAGE}`,
             { credentials: 'include' }
         );
         
