@@ -2,785 +2,1426 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>High-Quality Video Upload & Viewer</title>
-<meta name="description" content="Upload, watch, share and comment on high quality MP4 videos.">
+<title>Vibro.x - High-Quality Video Platform</title>
+<meta name="description" content="Upload, watch, share and comment on high quality videos.">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="icon" type="image/x-icon" href="icon/Vibro.ico?v=1">
 <link rel="shortcut icon" type="image/x-icon" href="icon/Vibro.ico?v=1">
 <link rel="apple-touch-icon" href="icon/Vibro.ico?v=1">
-<!-- Font Awesome for icons -->
+<!-- Font Awesome -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<!-- Inter Font -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
-body { 
-    font-family: 'Segoe UI', Arial, sans-serif; 
-    background: linear-gradient(135deg, #121212 0%, #1a1a2e 100%);
-    color: #fff; 
-    margin:0; 
-    padding:2rem; 
-    min-height: 100vh;
+:root {
+    --primary: #ff0000;
+    --primary-dark: #cc0000;
+    --primary-light: #ff3333;
+    --secondary: #065fd4;
+    --dark-bg: #0f0f0f;
+    --dark-surface: #212121;
+    --dark-surface-light: #383838;
+    --dark-surface-hover: #4d4d4d;
+    --text-primary: #ffffff;
+    --text-secondary: #aaaaaa;
+    --text-tertiary: #717171;
+    --border-color: #303030;
+    --success: #2ecc71;
+    --danger: #e74c3c;
+    --warning: #f39c12;
+    --info: #3498db;
+    --shadow-sm: 0 1px 2px rgba(0,0,0,0.3);
+    --shadow-md: 0 4px 6px rgba(0,0,0,0.4);
+    --shadow-lg: 0 10px 25px rgba(0,0,0,0.5);
+    --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    --border-radius: 12px;
+    --border-radius-sm: 8px;
+    --border-radius-full: 9999px;
 }
 
-.header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 2rem;
-    padding-bottom: 1rem;
-    border-bottom: 1px solid #333;
-}
-
-.header-left h1 {
+* {
     margin: 0;
-    background: linear-gradient(90deg, #0077cc, #00a8ff);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-    font-size: 2rem;
+    padding: 0;
+    box-sizing: border-box;
 }
 
-.user-profile {
+body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+    background-color: var(--dark-bg);
+    color: var(--text-primary);
+    line-height: 1.6;
+    overflow-x: hidden;
+}
+
+/* Header Styles */
+.header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 56px;
+    background-color: var(--dark-surface);
+    border-bottom: 1px solid var(--border-color);
     display: flex;
     align-items: center;
-    gap: 1rem;
-    padding: 0.5rem 1rem;
-    background: rgba(255, 255, 255, 0.05);
-    border-radius: 50px;
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 0 16px;
+    z-index: 1000;
+    gap: 24px;
+}
+
+.logo {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-weight: 700;
+    font-size: 20px;
+    color: var(--text-primary);
+    text-decoration: none;
+}
+
+.logo-icon {
+    color: var(--primary);
+}
+
+.search-container {
+    flex: 1;
+    max-width: 650px;
+}
+
+.search-bar {
+    display: flex;
+    height: 40px;
+    border-radius: var(--border-radius-full);
+    overflow: hidden;
+    border: 1px solid var(--border-color);
+    background: var(--dark-bg);
+}
+
+.search-input {
+    flex: 1;
+    padding: 0 16px;
+    background: transparent;
+    border: none;
+    color: var(--text-primary);
+    font-size: 16px;
+    outline: none;
+}
+
+.search-button {
+    width: 64px;
+    background: var(--dark-surface-light);
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: var(--transition);
+}
+
+.search-button:hover {
+    background: var(--dark-surface-hover);
+}
+
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-left: auto;
+}
+
+.upload-btn {
+    background: var(--primary);
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: var(--border-radius-full);
+    font-weight: 500;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: var(--transition);
+}
+
+.upload-btn:hover {
+    background: var(--primary-dark);
+}
+
+.user-menu {
+    position: relative;
 }
 
 .user-avatar {
-    width: 44px;
-    height: 44px;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: var(--transition);
+}
+
+.user-avatar:hover {
+    border-color: var(--primary);
+}
+
+.user-dropdown {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    margin-top: 8px;
+    width: 200px;
+    background: var(--dark-surface);
+    border-radius: var(--border-radius-sm);
+    box-shadow: var(--shadow-lg);
+    border: 1px solid var(--border-color);
+    display: none;
+    z-index: 1001;
+}
+
+.user-dropdown.show {
+    display: block;
+}
+
+.dropdown-header {
+    padding: 16px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.dropdown-header h3 {
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.dropdown-header p {
+    font-size: 12px;
+    color: var(--text-tertiary);
+    margin-top: 4px;
+}
+
+.dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    color: var(--text-primary);
+    text-decoration: none;
+    transition: var(--transition);
+    cursor: pointer;
+    border: none;
+    background: none;
+    width: 100%;
+    text-align: left;
+    font-size: 14px;
+}
+
+.dropdown-item:hover {
+    background: var(--dark-surface-light);
+}
+
+.dropdown-item i {
+    width: 20px;
+    color: var(--text-secondary);
+}
+
+/* Main Content */
+.main-container {
+    display: flex;
+    margin-top: 56px;
+    min-height: calc(100vh - 56px);
+}
+
+.sidebar {
+    width: 240px;
+    background: var(--dark-surface);
+    border-right: 1px solid var(--border-color);
+    padding: 12px 0;
+    position: fixed;
+    top: 56px;
+    left: 0;
+    bottom: 0;
+    overflow-y: auto;
+}
+
+.sidebar-item {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    padding: 12px 24px;
+    color: var(--text-primary);
+    text-decoration: none;
+    transition: var(--transition);
+    cursor: pointer;
+    border-radius: var(--border-radius-sm);
+    margin: 0 12px 4px;
+}
+
+.sidebar-item:hover {
+    background: var(--dark-surface-light);
+}
+
+.sidebar-item.active {
+    background: var(--dark-surface-light);
+    font-weight: 500;
+}
+
+.sidebar-item i {
+    width: 24px;
+    text-align: center;
+}
+
+.main-content {
+    flex: 1;
+    margin-left: 240px;
+    padding: 24px;
+}
+
+/* Upload Section */
+.upload-container {
+    max-width: 800px;
+    margin: 0 auto;
+    background: var(--dark-surface);
+    border-radius: var(--border-radius);
+    padding: 32px;
+    box-shadow: var(--shadow-lg);
+    border: 1px solid var(--border-color);
+}
+
+.upload-container h2 {
+    font-size: 24px;
+    margin-bottom: 24px;
+    color: var(--text-primary);
+}
+
+.upload-area {
+    border: 2px dashed var(--border-color);
+    border-radius: var(--border-radius);
+    padding: 48px 32px;
+    text-align: center;
+    margin-bottom: 24px;
+    transition: var(--transition);
+    cursor: pointer;
+}
+
+.upload-area:hover {
+    border-color: var(--primary);
+    background: rgba(255, 0, 0, 0.05);
+}
+
+.upload-area.dragover {
+    border-color: var(--primary);
+    background: rgba(255, 0, 0, 0.1);
+}
+
+.upload-icon {
+    font-size: 48px;
+    color: var(--primary);
+    margin-bottom: 16px;
+}
+
+.file-info {
+    background: var(--dark-bg);
+    border-radius: var(--border-radius-sm);
+    padding: 16px;
+    margin-bottom: 16px;
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 500;
+    color: var(--text-primary);
+}
+
+.form-group input,
+.form-group textarea,
+.form-group select {
+    width: 100%;
+    padding: 12px 16px;
+    background: var(--dark-bg);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-sm);
+    color: var(--text-primary);
+    font-size: 14px;
+    transition: var(--transition);
+}
+
+.form-group input:focus,
+.form-group textarea:focus,
+.form-group select:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 2px rgba(255, 0, 0, 0.1);
+}
+
+.form-group textarea {
+    min-height: 100px;
+    resize: vertical;
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+}
+
+.checkbox-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin-top: 8px;
+}
+
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.checkbox-label input {
+    width: auto;
+}
+
+.upload-actions {
+    display: flex;
+    gap: 12px;
+    margin-top: 32px;
+}
+
+.btn-primary {
+    background: var(--primary);
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: var(--border-radius-sm);
+    font-weight: 500;
+    cursor: pointer;
+    transition: var(--transition);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.btn-primary:hover {
+    background: var(--primary-dark);
+    transform: translateY(-1px);
+}
+
+.btn-secondary {
+    background: var(--dark-surface-light);
+    color: var(--text-primary);
+    border: none;
+    padding: 12px 24px;
+    border-radius: var(--border-radius-sm);
+    font-weight: 500;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.btn-secondary:hover {
+    background: var(--dark-surface-hover);
+}
+
+/* Videos Grid */
+.videos-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 24px;
+    margin-top: 24px;
+}
+
+.video-card {
+    background: var(--dark-surface);
+    border-radius: var(--border-radius);
+    overflow: hidden;
+    transition: var(--transition);
+    cursor: pointer;
+    border: 1px solid var(--border-color);
+}
+
+.video-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-lg);
+    border-color: var(--primary);
+}
+
+.video-thumbnail {
+    position: relative;
+    aspect-ratio: 16 / 9;
+    overflow: hidden;
+}
+
+.video-thumbnail img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: var(--transition);
+}
+
+.video-card:hover .video-thumbnail img {
+    transform: scale(1.05);
+}
+
+.video-duration {
+    position: absolute;
+    bottom: 8px;
+    right: 8px;
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.video-info {
+    padding: 12px;
+}
+
+.channel-avatar {
+    width: 36px;
+    height: 36px;
     border-radius: 50%;
     object-fit: cover;
-    border: 2px solid #0077cc;
+    float: left;
+    margin-right: 12px;
 }
 
-.user-info h3 {
-    margin: 0;
-    font-size: 1rem;
+.video-title {
+    font-weight: 500;
+    margin-bottom: 8px;
+    line-height: 1.4;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
 }
 
-.user-info p {
-    margin: 0;
-    font-size: 0.8rem;
-    opacity: 0.7;
+.channel-name {
+    font-size: 14px;
+    color: var(--text-secondary);
+    margin-bottom: 4px;
 }
 
-.logout-btn {
-    background: rgba(255, 50, 50, 0.2);
-    color: #ff5555;
-    border: none;
-    padding: 0.5rem 1rem;
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 0.9rem;
-    transition: 0.3s;
+.video-stats {
+    font-size: 14px;
+    color: var(--text-tertiary);
+    display: flex;
+    gap: 8px;
 }
 
-.logout-btn:hover {
-    background: rgba(255, 50, 50, 0.4);
+/* Video Player Modal */
+.video-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.95);
+    z-index: 2000;
+    display: none;
 }
 
-#uploadSection, #videosSection { 
-    background: rgba(31, 31, 31, 0.8); 
-    padding: 1.5rem; 
-    border-radius: 16px; 
-    margin-bottom: 2rem; 
-    backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.05);
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+.video-modal.show {
+    display: block;
 }
 
-#uploadSection h2, #videosSection h2 {
-    margin-top: 0;
-    color: #fff;
-    font-size: 1.5rem;
-}
-
-#uploadSection input, #uploadSection button, #searchInput { 
-    padding: 0.75rem; 
-    margin: 0.5rem 0; 
-    width: 100%; 
-    border-radius: 8px; 
-    border: 1px solid rgba(255, 255, 255, 0.1); 
-    font-size: 1rem; 
-    background: rgba(0, 0, 0, 0.3);
-    color: #fff;
-}
-
-#uploadSection input:focus, #searchInput:focus {
-    outline: none;
-    border-color: #0077cc;
-    box-shadow: 0 0 0 2px rgba(0, 119, 204, 0.2);
-}
-
-#uploadSection button, #loadMoreBtn, .shareBtn, .new-comment button, #videoModal button, .like-btn, .action-btn { 
-    background: linear-gradient(135deg, #0077cc 0%, #00a8ff 100%);
-    color: #fff; 
-    font-weight: bold; 
-    cursor: pointer; 
-    transition: all 0.3s ease; 
-    border: none; 
-    border-radius: 8px;
-    padding: 0.75rem 1.5rem;
-}
-
-#uploadSection button:hover, #loadMoreBtn:hover, .shareBtn:hover, .new-comment button:hover, #videoModal button:hover, .like-btn:hover, .action-btn:hover { 
-    background: linear-gradient(135deg, #005fa3 0%, #0077cc 100%);
-    transform: translateY(-2px);
-    box-shadow: 0 5px 15px rgba(0, 119, 204, 0.3);
-}
-
-progress { 
-    width: 100%; 
-    height: 8px; 
-    margin-top: 1rem; 
-    border-radius: 10px; 
-    overflow: hidden; 
-    display: none; 
-}
-
-progress::-webkit-progress-bar {
-    background: rgba(0, 0, 0, 0.3);
-    border-radius: 10px;
-}
-
-progress::-webkit-progress-value {
-    background: linear-gradient(90deg, #0077cc, #00a8ff);
-    border-radius: 10px;
-}
-
-#result { 
-    margin-top: 1rem; 
-    word-break: break-word; 
-    font-size: 0.95rem; 
-}
-
-#totalVideos { 
-    margin-bottom: 1rem; 
-    font-weight: bold; 
-    font-size: 0.95rem; 
-    opacity: 0.8;
-}
-
-#videosList { 
-    display: flex; 
-    flex-direction: column; 
-    gap: 2rem; 
-}
-
-.video-item { 
-    position: relative; 
-    border-radius: 20px; 
-    overflow: hidden; 
-    background: rgba(31, 31, 31, 0.8); 
-    cursor: pointer; 
-    transition: all 0.3s ease; 
-    width: 100%; 
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5); 
-    display: flex; 
-    flex-direction: column; 
-    padding: 1.5rem; 
-    border: 1px solid rgba(255, 255, 255, 0.05);
-}
-
-.video-item:hover { 
-    transform: translateY(-5px); 
-    box-shadow: 0 15px 30px rgba(0, 0, 0, 0.7); 
-    border-color: rgba(0, 119, 204, 0.3);
-}
-
-.video-item video { 
-    width: 100%; 
-    height: auto; 
-    max-height: 400px;
-    display: block; 
-    border-radius: 12px; 
-    background-color: black; 
-    margin-bottom: 0.5rem; 
-}
-
-.video-duration { 
-    position: absolute; 
-    bottom: 24px; 
-    right: 24px; 
-    background: rgba(0, 0, 0, 0.7); 
-    color: #fff; 
-    padding: 4px 8px; 
-    border-radius: 6px; 
-    font-size: 0.75rem; 
-    pointer-events: none; 
-    opacity: 0; 
-    transition: opacity 0.2s; 
-}
-
-.user-info { 
-    display: flex; 
-    align-items: center; 
-    gap: 0.75rem; 
-    margin-bottom: 1rem; 
-}
-
-.user-info img { 
-    width: 42px; 
-    height: 42px; 
-    border-radius: 50%; 
-    object-fit: cover; 
-    border: 2px solid #0077cc;
-}
-
-.user-details {
+.modal-content {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 24px;
+    height: 100%;
     display: flex;
     flex-direction: column;
 }
 
-.user-details .username { 
-    font-weight: bold; 
-    font-size: 1rem;
-}
-
-.user-details .upload-time { 
-    font-size: 0.8rem; 
-    opacity: 0.7;
-}
-
-.video-meta {
-    margin: 1rem 0;
-}
-
-.video-title {
-    font-size: 1.4rem;
-    font-weight: bold;
-    margin: 0.5rem 0;
-}
-
-.video-description {
-    font-size: 0.95rem;
-    opacity: 0.9;
-    line-height: 1.5;
-    margin: 0.5rem 0 1rem 0;
-}
-
-.video-stats {
+.modal-header {
     display: flex;
-    gap: 1.5rem;
-    margin: 1rem 0;
+    justify-content: flex-end;
+    margin-bottom: 16px;
 }
 
-.stat {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    font-size: 0.9rem;
-    opacity: 0.9;
-}
-
-.stat i {
-    font-size: 1.1rem;
-}
-
-.like-btn {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    background: rgba(255, 50, 50, 0.1);
-    border: 1px solid rgba(255, 50, 50, 0.2);
-    padding: 0.5rem 1rem;
-    border-radius: 20px;
-    cursor: pointer;
-    transition: all 0.3s;
-    font-size: 0.9rem;
-}
-
-.like-btn.liked {
-    background: rgba(255, 50, 50, 0.3);
-    border-color: rgba(255, 50, 50, 0.5);
-    color: #ff5555;
-}
-
-.like-btn:hover {
-    background: rgba(255, 50, 50, 0.2);
-    transform: scale(1.05);
-}
-
-.video-actions {
-    display: flex;
-    gap: 1rem;
-    margin: 1rem 0;
-}
-
-.comment { 
-    background: rgba(42, 42, 42, 0.6); 
-    padding: 0.8rem; 
-    margin-top: 0.5rem; 
-    border-radius: 10px; 
-    border-left: 3px solid #0077cc;
-}
-
-.comment-user { 
-    font-weight: bold; 
-    font-size: 0.85rem; 
-    display: flex; 
-    align-items: center; 
-    gap: 0.5rem; 
-    margin-bottom: 0.5rem;
-}
-
-.comment-user img { 
-    width: 28px; 
-    height: 28px; 
-    border-radius: 50%; 
-    object-fit: cover;
-}
-
-.comment-text { 
-    font-size: 0.9rem; 
-    line-height: 1.4;
-    margin-left: 2.5rem;
-}
-
-.comment-meta {
-    display: flex;
-    justify-content: space-between;
-    font-size: 0.75rem;
-    opacity: 0.7;
-    margin-top: 0.5rem;
-    margin-left: 2.5rem;
-}
-
-.new-comment { 
-    display: flex; 
-    gap: 0.5rem; 
-    margin-top: 1rem; 
-}
-
-.new-comment input { 
-    flex: 1; 
-    padding: 0.75rem; 
-    border-radius: 8px; 
-    border: 1px solid rgba(255, 255, 255, 0.1); 
-    background: rgba(0, 0, 0, 0.3); 
-    color: #fff;
-}
-
-#videoModal { 
-    display: none; 
-    position: fixed; 
-    top: 0; 
-    left: 0; 
-    width: 100%; 
-    height: 100%; 
-    background: rgba(0, 0, 0, 0.98); 
-    justify-content: center; 
-    align-items: center; 
-    z-index: 9999; 
-}
-
-#videoModal video { 
-    width: 90%; 
-    max-height: 90%; 
-    border-radius: 12px; 
-    box-shadow: 0 0 40px rgba(0, 119, 204, 0.3); 
-}
-
-#videoModal button {
-    position: absolute;
-    top: 20px;
-    right: 20px;
+.close-modal {
+    background: var(--dark-surface);
+    border: none;
+    color: var(--text-primary);
     width: 40px;
     height: 40px;
     border-radius: 50%;
-    background: rgba(255, 255, 255, 0.1);
-    color: white;
-    font-size: 1.2rem;
+    cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
+    transition: var(--transition);
 }
 
-#videoModal button:hover {
-    background: rgba(255, 255, 255, 0.2);
+.close-modal:hover {
+    background: var(--dark-surface-light);
 }
 
+.modal-body {
+    display: flex;
+    gap: 24px;
+    flex: 1;
+    overflow: hidden;
+}
+
+.video-player-container {
+    flex: 3;
+    min-width: 0;
+}
+
+.video-player {
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    background: #000;
+    border-radius: var(--border-radius);
+    overflow: hidden;
+}
+
+.video-sidebar {
+    flex: 1;
+    min-width: 0;
+    overflow-y: auto;
+}
+
+.video-details {
+    background: var(--dark-surface);
+    border-radius: var(--border-radius);
+    padding: 20px;
+    margin-bottom: 16px;
+}
+
+.video-title-large {
+    font-size: 20px;
+    font-weight: 600;
+    margin-bottom: 12px;
+    line-height: 1.4;
+}
+
+.video-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.video-views {
+    font-size: 14px;
+    color: var(--text-tertiary);
+}
+
+.video-actions-bar {
+    display: flex;
+    gap: 8px;
+    border-top: 1px solid var(--border-color);
+    padding-top: 16px;
+}
+
+.action-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    background: var(--dark-surface-light);
+    border: none;
+    border-radius: var(--border-radius-full);
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: var(--transition);
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.action-btn:hover {
+    background: var(--dark-surface-hover);
+}
+
+.action-btn.liked {
+    color: var(--primary);
+}
+
+.video-description {
+    background: var(--dark-surface-light);
+    border-radius: var(--border-radius-sm);
+    padding: 16px;
+    margin-top: 16px;
+}
+
+.description-toggle {
+    color: var(--text-secondary);
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-weight: 500;
+    padding: 4px 0;
+    margin-top: 8px;
+}
+
+/* Comments Section - YouTube Style */
+.comments-section {
+    background: var(--dark-surface);
+    border-radius: var(--border-radius);
+    padding: 20px;
+    margin-top: 24px;
+}
+
+.comments-header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.comments-count {
+    font-size: 18px;
+    font-weight: 600;
+}
+
+.comments-sort {
+    background: var(--dark-surface-light);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    padding: 8px 16px;
+    border-radius: var(--border-radius-full);
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.comment-form {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 24px;
+}
+
+.comment-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
+}
+
+.comment-input-container {
+    flex: 1;
+}
+
+.comment-input {
+    width: 100%;
+    padding: 12px 16px;
+    background: var(--dark-bg);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-full);
+    color: var(--text-primary);
+    font-size: 14px;
+    outline: none;
+    transition: var(--transition);
+    font-family: inherit;
+}
+
+.comment-input:focus {
+    border-color: var(--primary);
+}
+
+.comment-submit {
+    background: var(--primary);
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: var(--border-radius-full);
+    font-weight: 500;
+    cursor: pointer;
+    transition: var(--transition);
+    align-self: flex-start;
+    margin-top: 8px;
+}
+
+.comment-submit:hover {
+    background: var(--primary-dark);
+}
+
+.comments-list {
+    max-height: 600px;
+    overflow-y: auto;
+    padding-right: 8px;
+}
+
+.comment-item {
+    display: flex;
+    gap: 16px;
+    padding: 16px 0;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.comment-content {
+    flex: 1;
+}
+
+.comment-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.comment-author {
+    font-weight: 500;
+    font-size: 14px;
+    color: var(--text-primary);
+}
+
+.comment-time {
+    color: var(--text-tertiary);
+    font-size: 12px;
+}
+
+.comment-text {
+    font-size: 14px;
+    line-height: 1.5;
+    margin-bottom: 8px;
+    color: var(--text-primary);
+}
+
+.comment-actions {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+    margin-top: 8px;
+}
+
+.comment-like {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-size: 12px;
+    padding: 4px 8px;
+    border-radius: var(--border-radius-full);
+    transition: var(--transition);
+}
+
+.comment-like:hover {
+    background: var(--dark-surface-light);
+}
+
+.comment-like.liked {
+    color: var(--primary);
+}
+
+.comment-reply {
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-size: 12px;
+    padding: 4px 8px;
+    border-radius: var(--border-radius-full);
+    transition: var(--transition);
+}
+
+.comment-reply:hover {
+    background: var(--dark-surface-light);
+}
+
+.replies-container {
+    margin-left: 40px;
+    margin-top: 12px;
+    padding-left: 16px;
+    border-left: 2px solid var(--border-color);
+}
+
+.load-more-comments {
+    text-align: center;
+    margin-top: 16px;
+}
+
+.load-more-btn {
+    background: var(--dark-surface-light);
+    border: none;
+    color: var(--text-primary);
+    padding: 12px 24px;
+    border-radius: var(--border-radius-full);
+    cursor: pointer;
+    font-weight: 500;
+    transition: var(--transition);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin: 0 auto;
+}
+
+.load-more-btn:hover {
+    background: var(--dark-surface-hover);
+}
+
+/* Notifications */
 .notification {
     position: fixed;
     top: 20px;
     right: 20px;
-    background: rgba(0, 119, 204, 0.9);
-    color: white;
-    padding: 1rem 1.5rem;
-    border-radius: 8px;
-    z-index: 10000;
+    padding: 16px 24px;
+    border-radius: var(--border-radius-sm);
+    background: var(--dark-surface);
+    border: 1px solid var(--border-color);
+    box-shadow: var(--shadow-lg);
+    z-index: 3000;
     display: none;
-    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+    align-items: center;
+    gap: 12px;
+    max-width: 400px;
 }
 
+.notification.show {
+    display: flex;
+    animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+.notification.success {
+    border-left: 4px solid var(--success);
+}
+
+.notification.error {
+    border-left: 4px solid var(--danger);
+}
+
+.notification.info {
+    border-left: 4px solid var(--info);
+}
+
+/* Loading States */
 .loading {
-    text-align: center;
-    padding: 2rem;
-    opacity: 0.7;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 48px;
+    gap: 16px;
 }
 
-.loading i {
-    font-size: 2rem;
-    margin-bottom: 1rem;
-    color: #0077cc;
+.loading-spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid var(--border-color);
+    border-top-color: var(--primary);
+    border-radius: 50%;
     animation: spin 1s linear infinite;
 }
 
 @keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Responsive Design for Mobile */
+@media (max-width: 1200px) {
+    .sidebar {
+        width: 72px;
+    }
+    
+    .sidebar-item span {
+        display: none;
+    }
+    
+    .main-content {
+        margin-left: 72px;
+    }
+    
+    .modal-body {
+        flex-direction: column;
+    }
+}
+
+@media (max-width: 768px) {
+    .header {
+        padding: 0 8px;
+        gap: 12px;
+    }
+    
+    .search-container {
+        display: none;
+    }
+    
+    .videos-grid {
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: 16px;
+    }
+    
+    .upload-container {
+        padding: 24px;
+        margin: 0 16px;
+    }
+    
+    .modal-content {
+        padding: 16px;
+    }
+    
+    .video-actions-bar {
+        flex-wrap: wrap;
+    }
+    
+    .comment-form {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .comment-input-container {
+        width: 100%;
+    }
+    
+    .comment-submit {
+        align-self: flex-end;
+    }
+}
+
+@media (max-width: 480px) {
+    .sidebar {
+        display: none;
+    }
+    
+    .main-content {
+        margin-left: 0;
+        padding: 16px;
+    }
+    
+    .videos-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .modal-body {
+        gap: 16px;
+    }
+    
+    .video-sidebar {
+        display: none;
+    }
+    
+    .video-player-container {
+        flex: 1;
+    }
+}
+
+/* Mobile-specific autoplay styles */
+@media (hover: none) and (pointer: coarse) {
+    .video-card:hover {
+        transform: none;
+        box-shadow: var(--shadow-sm);
+    }
+    
+    .video-card .video-thumbnail img {
+        transition: none;
+    }
+}
+
+/* Mobile video hover effect override */
+@media (hover: hover) {
+    .video-card:hover .video-thumbnail img {
+        transform: scale(1.05);
+    }
+}
+
+/* Mobile touch feedback */
+@media (max-width: 768px) {
+    .video-card:active {
+        transform: scale(0.98);
+        transition: transform 0.1s ease;
+    }
 }
 </style>
 </head>
 <body>
 
-<div class="header">
-    <div class="header-left">
-        <h1>Vibro.x</h1>
-        <p style="margin: 0; opacity: 0.7;">High-quality video sharing platform</p>
-    </div>
-    <div class="user-profile" id="userProfile">
-        <img src="https://via.placeholder.com/44" alt="User Avatar" class="user-avatar" id="userAvatar">
-        <div class="user-info">
-            <h3 id="username">Guest User</h3>
-            <p id="userEmail">Sign in to upload</p>
+<!-- Header -->
+<header class="header">
+    <a href="#" class="logo">
+        <i class="fas fa-play-circle logo-icon"></i>
+        <span>Vibro.x</span>
+    </a>
+    
+    <div class="search-container">
+        <div class="search-bar">
+            <input type="text" class="search-input" placeholder="Search videos..." id="searchInput">
+            <button class="search-button" id="searchButton">
+                <i class="fas fa-search"></i>
+            </button>
         </div>
-        <button class="logout-btn" onclick="logout()" id="logoutBtn" style="display: none;">
-            <i class="fas fa-sign-out-alt"></i> Logout
+    </div>
+    
+    <div class="header-actions">
+        <button class="upload-btn" id="uploadBtn">
+            <i class="fas fa-upload"></i>
+            <span>Upload</span>
         </button>
+        
+        <div class="user-menu">
+            <img src="https://ui-avatars.com/api/?name=User&background=random" 
+                 alt="User" 
+                 class="user-avatar" 
+                 id="userAvatar">
+            
+            <div class="user-dropdown" id="userDropdown">
+                <div class="dropdown-header" id="dropdownHeader">
+                    <h3>Guest User</h3>
+                    <p>Sign in to upload videos</p>
+                </div>
+                <button class="dropdown-item" id="loginBtn">
+                    <i class="fas fa-sign-in-alt"></i>
+                    <span>Sign In</span>
+                </button>
+                <button class="dropdown-item" id="logoutBtn" style="display: none;">
+                    <i class="fas fa-sign-out-alt"></i>
+                    <span>Logout</span>
+                </button>
+                <button class="dropdown-item" id="settingsBtn">
+                    <i class="fas fa-cog"></i>
+                    <span>Settings</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</header>
+
+<!-- Sidebar -->
+<nav class="sidebar">
+    <a href="#" class="sidebar-item active" id="homeBtn">
+        <i class="fas fa-home"></i>
+        <span>Home</span>
+    </a>
+    <a href="#" class="sidebar-item" id="trendingBtn">
+        <i class="fas fa-fire"></i>
+        <span>Trending</span>
+    </a>
+    <a href="#" class="sidebar-item" id="historyBtn">
+        <i class="fas fa-history"></i>
+        <span>History</span>
+    </a>
+    <a href="#" class="sidebar-item" id="likedBtn">
+        <i class="fas fa-thumbs-up"></i>
+        <span>Liked videos</span>
+    </a>
+    <a href="#" class="sidebar-item" id="yourVideosBtn">
+        <i class="fas fa-play-circle"></i>
+        <span>Your videos</span>
+    </a>
+    <a href="#" class="sidebar-item" id="watchLaterBtn">
+        <i class="fas fa-clock"></i>
+        <span>Watch later</span>
+    </a>
+</nav>
+
+<!-- Main Content -->
+<main class="main-container">
+    <div class="main-content">
+        <!-- Upload Section (Hidden by default) -->
+        <div class="upload-container" id="uploadSection" style="display: none;">
+            <h2>Upload Video</h2>
+            
+            <div class="upload-area" id="uploadArea">
+                <div class="upload-icon">
+                    <i class="fas fa-cloud-upload-alt"></i>
+                </div>
+                <h3>Select video to upload</h3>
+                <p>or drag and drop video file</p>
+                <p class="text-tertiary">MP4, WebM, MOV up to 500MB</p>
+                <button class="btn-primary" id="selectFileBtn">
+                    <i class="fas fa-file-video"></i>
+                    Select Files
+                </button>
+            </div>
+            
+            <input type="file" id="videoFile" accept="video/*" style="display: none;">
+            <input type="file" id="coverFile" accept="image/*" style="display: none;">
+            
+            <div id="fileInfo" class="file-info" style="display: none;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <h4 id="fileName"></h4>
+                        <p id="fileSize" class="text-tertiary"></p>
+                    </div>
+                    <button class="btn-secondary" id="clearFileBtn">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <form id="uploadForm">
+                <div class="form-group">
+                    <label for="videoTitle">Title</label>
+                    <input type="text" id="videoTitle" placeholder="Enter video title" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="videoDescription">Description</label>
+                    <textarea id="videoDescription" placeholder="Tell viewers about your video"></textarea>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="videoCategory">Category</label>
+                        <select id="videoCategory">
+                            <option value="">Select category</option>
+                            <option value="entertainment">Entertainment</option>
+                            <option value="music">Music</option>
+                            <option value="gaming">Gaming</option>
+                            <option value="education">Education</option>
+                            <option value="sports">Sports</option>
+                            <option value="tech">Technology</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="videoPrivacy">Privacy</label>
+                        <select id="videoPrivacy">
+                            <option value="public">Public</option>
+                            <option value="unlisted">Unlisted</option>
+                            <option value="private">Private</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label>Tags (comma separated)</label>
+                    <input type="text" id="videoTags" placeholder="e.g., gaming, tutorial, vlog">
+                </div>
+                
+                <div class="form-group">
+                    <label>Video Settings</label>
+                    <div class="checkbox-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="allowComments" checked>
+                            <span>Allow comments</span>
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="allowRatings" checked>
+                            <span>Allow ratings</span>
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="showViewCount" checked>
+                            <span>Show view count</span>
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="aiGenerated">
+                            <span>AI Generated</span>
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="upload-actions">
+                    <button type="submit" class="btn-primary" id="submitUploadBtn">
+                        <i class="fas fa-upload"></i>
+                        Upload Video
+                    </button>
+                    <button type="button" class="btn-secondary" id="cancelUploadBtn">
+                        Cancel
+                    </button>
+                </div>
+            </form>
+        </div>
+        
+        <!-- Videos Grid -->
+        <div id="videosSection">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+                <h2>Recommended Videos</h2>
+                <div>
+                    <select id="sortVideos" class="comments-sort">
+                        <option value="newest">Newest first</option>
+                        <option value="popular">Most popular</option>
+                        <option value="oldest">Oldest first</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="videos-grid" id="videosList">
+                <div class="loading">
+                    <div class="loading-spinner"></div>
+                    <p>Loading videos...</p>
+                </div>
+            </div>
+            
+            <div class="load-more-comments" id="loadMoreContainer" style="display: none;">
+                <button class="load-more-btn" id="loadMoreBtn">
+                    <i class="fas fa-redo"></i>
+                    Load More Videos
+                </button>
+            </div>
+        </div>
+    </div>
+</main>
+
+<!-- Video Player Modal -->
+<div class="video-modal" id="videoModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <button class="close-modal" id="closeModalBtn">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <div class="video-player-container">
+                <video class="video-player" id="modalVideo" controls playsinline>
+                    Your browser does not support the video tag.
+                </video>
+                
+                <div class="video-details">
+                    <h1 class="video-title-large" id="modalVideoTitle"></h1>
+                    
+                    <div class="video-meta">
+                        <div class="video-views" id="modalVideoMeta"></div>
+                        <div class="video-actions-bar">
+                            <button class="action-btn" id="likeBtn">
+                                <i class="far fa-thumbs-up"></i>
+                                <span id="likeCount">0</span>
+                            </button>
+                            <button class="action-btn" id="shareBtn">
+                                <i class="fas fa-share"></i>
+                                <span>Share</span>
+                            </button>
+                            <button class="action-btn" id="saveBtn">
+                                <i class="far fa-bookmark"></i>
+                                <span>Save</span>
+                            </button>
+                            <button class="action-btn" id="reportBtn">
+                                <i class="fas fa-flag"></i>
+                                <span>Report</span>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="video-description">
+                        <div id="videoDescriptionShort"></div>
+                        <div id="videoDescriptionFull" style="display: none;"></div>
+                        <button class="description-toggle" id="descriptionToggleBtn">
+                            Show more
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- YouTube-style Comments Section -->
+                <div class="comments-section" id="commentsSection">
+                    <div class="comments-header">
+                        <h3 class="comments-count" id="commentsCount">Comments</h3>
+                        <select class="comments-sort" id="commentsSort">
+                            <option value="newest">Newest first</option>
+                            <option value="top">Top comments</option>
+                            <option value="oldest">Oldest first</option>
+                        </select>
+                    </div>
+                    
+                    <div class="comment-form" id="commentForm">
+                        <img src="https://ui-avatars.com/api/?name=User&background=random" 
+                             alt="Your avatar" 
+                             class="comment-avatar"
+                             id="commentAvatar">
+                        <div class="comment-input-container">
+                            <input type="text" 
+                                   class="comment-input" 
+                                   id="commentInput" 
+                                   placeholder="Add a comment...">
+                            <button class="comment-submit" id="commentSubmitBtn">
+                                Comment
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="comments-list" id="commentsList">
+                        <div class="loading">
+                            <div class="loading-spinner"></div>
+                            <p>Loading comments...</p>
+                        </div>
+                    </div>
+                    
+                    <div class="load-more-comments" id="loadMoreComments" style="display: none;">
+                        <button class="load-more-btn" id="loadMoreCommentsBtn">
+                            Load more comments
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="video-sidebar" id="recommendedVideos">
+                <div class="loading">
+                    <div class="loading-spinner"></div>
+                    <p>Loading recommendations...</p>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 
-<div id="uploadSection">
-  <h2>Upload MP4 Video</h2>
-  <input type="file" id="videoFile" accept=".mp4,video/mp4">
-  <input type="file" id="coverFile" accept="image/*">
-  <input type="text" id="videoTitle" placeholder="Video title">
-  <textarea id="videoDescription" placeholder="Video description (optional)" rows="3"></textarea>
-  <button id="uploadBtn">Upload Video</button>
-  <progress id="progressBar" max="100"></progress>
-  <div id="result"></div>
-</div>
-
-<div id="videosSection">
-  <h2>Explore Videos</h2>
-  <input type="text" id="searchInput" placeholder="Search by title, username, or description...">
-  <div id="totalVideos"></div>
-  <div id="videosList">
-    <div class="loading" id="loadingVideos">
-        <i class="fas fa-spinner"></i>
-        <p>Loading videos...</p>
-    </div>
-  </div>
-  <button id="loadMoreBtn" style="display: none;">Load More Videos</button>
-</div>
-
-<div id="videoModal">
-  <video id="modalVideo" controls></video>
-  <button onclick="closeModal()">X</button>
-</div>
-
+<!-- Notifications -->
 <div class="notification" id="notification"></div>
 
 <script>
-let videosCache = [], displayedCount = 0, pageSize = 10;
-let observer;
+// =============== GLOBAL STATE ===============
 let currentUser = null;
-const isMobile = /iPhone|iPad|Android/i.test(navigator.userAgent);
-
-// REAL-TIME POLLING VARIABLES
-let lastUpdateCheck = Date.now();
+let currentVideo = null;
+let videosCache = [];
+let commentsCache = {};
+let displayedVideos = 0;
 let pollingInterval = null;
+let lastUpdateCheck = Date.now();
+let observer = null;
+let isMobile = /iPhone|iPad|Android/i.test(navigator.userAgent);
+const VIDEOS_PER_PAGE = 12;
+const COMMENTS_PER_PAGE = 20;
+const POLLING_INTERVAL = 3000; // 3 seconds
 
-// Notification system
+// =============== UTILITY FUNCTIONS ===============
 function showNotification(message, type = 'info') {
     const notification = document.getElementById('notification');
     notification.textContent = message;
-    notification.style.display = 'block';
-    notification.style.background = type === 'error' ? 'rgba(255, 50, 50, 0.9)' : 'rgba(0, 119, 204, 0.9)';
+    notification.className = `notification show ${type}`;
     
     setTimeout(() => {
-        notification.style.display = 'none';
+        notification.classList.remove('show');
     }, 3000);
 }
 
-// Load current user
-async function loadCurrentUser() {
-    try {
-        const res = await fetch('/api/me', { 
-            method: 'GET',
-            credentials: 'include'
-        });
-        
-        if (res.ok) {
-            const data = await res.json();
-            if (data.success && data.authenticated) {
-                currentUser = data.user;
-                updateUserProfile(currentUser);
-                document.getElementById('logoutBtn').style.display = 'block';
-            } else {
-                currentUser = null;
-                document.getElementById('logoutBtn').style.display = 'none';
-            }
-        } else {
-            currentUser = null;
-            document.getElementById('logoutBtn').style.display = 'none';
-        }
-    } catch (err) {
-        console.error('Failed to load user:', err);
-        currentUser = null;
-        document.getElementById('logoutBtn').style.display = 'none';
+function formatNumber(num) {
+    if (num >= 1000000) {
+        return (num / 1000000).toFixed(1) + 'M';
+    } else if (num >= 1000) {
+        return (num / 1000).toFixed(1) + 'K';
     }
+    return num.toString();
 }
 
-// Update user profile in header
-function updateUserProfile(user) {
-    if (user && user.authenticated !== false) {
-        document.getElementById('userAvatar').src = user.avatar_url || user.profile_picture || 'https://via.placeholder.com/44';
-        document.getElementById('username').textContent = user.username || user.email || 'User';
-        document.getElementById('userEmail').textContent = user.email || '';
-    } else {
-        document.getElementById('userAvatar').src = 'https://via.placeholder.com/44';
-        document.getElementById('username').textContent = 'Guest User';
-        document.getElementById('userEmail').textContent = 'Sign in to upload';
-    }
-}
-
-// Logout function
-async function logout() {
-    try {
-        const res = await fetch('/api/logout', {
-            method: 'POST',
-            credentials: 'include'
-        });
-        
-        if (res.ok) {
-            currentUser = null;
-            updateUserProfile(null);
-            showNotification('Logged out successfully');
-            document.getElementById('logoutBtn').style.display = 'none';
-            loadVideos(true);
-        }
-    } catch (err) {
-        showNotification('Logout failed', 'error');
-    }
-}
-
-// Modal functions
-function openModal(url){ 
-    const m = document.getElementById('videoModal');
-    const v = document.getElementById('modalVideo'); 
-    v.src = url; 
-    m.style.display = 'flex'; 
-    v.play(); 
-}
-
-function closeModal(){ 
-    const m = document.getElementById('videoModal');
-    const v = document.getElementById('modalVideo'); 
-    v.pause(); 
-    v.src = ''; 
-    m.style.display = 'none'; 
-}
-
-// Mobile scroll autoplay
-function initObserver(){
-    if(!isMobile) return;
-    observer = new IntersectionObserver(entries => {
-        entries.forEach(entry => {
-            const v = entry.target;
-            if(entry.isIntersecting){ 
-                v.play().catch(() => {}); 
-            } else { 
-                v.pause(); 
-            }
-        });
-    }, { threshold: 0.5 });
-}
-
-// Like a video
-async function likeVideo(videoId, isLiked) {
-    if (!currentUser) {
-        showNotification('Please sign in to like videos', 'error');
-        return;
-    }
+function formatDuration(seconds) {
+    if (!seconds) return '--:--';
+    const hrs = Math.floor(seconds / 3600);
+    const mins = Math.floor((seconds % 3600) / 60);
+    const secs = Math.floor(seconds % 60);
     
-    try {
-        const res = await fetch('/api/like-video', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
-            body: JSON.stringify({ videoId, action: isLiked ? 'unlike' : 'like' })
-        });
-        
-        if (res.ok) {
-            const data = await res.json();
-            // Update the UI immediately
-            const videoItem = document.querySelector(`.video-item[data-video-id="${videoId}"]`);
-            if (videoItem) {
-                const likeBtn = videoItem.querySelector('.like-btn');
-                const likeCount = videoItem.querySelector('.like-count');
-                
-                if (likeBtn && likeCount) {
-                    if (data.liked) {
-                        likeBtn.classList.add('liked');
-                        likeBtn.innerHTML = `<i class="fas fa-heart"></i> Liked`;
-                    } else {
-                        likeBtn.classList.remove('liked');
-                        likeBtn.innerHTML = `<i class="far fa-heart"></i> Like`;
-                    }
-                    likeCount.textContent = data.likes || 0;
-                }
-            }
-            
-            showNotification(isLiked ? 'Video unliked' : 'Video liked!');
-        }
-    } catch (err) {
-        showNotification('Failed to like video', 'error');
+    if (hrs > 0) {
+        return `${hrs}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
     }
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
 }
 
-// Upload video
-document.getElementById('uploadBtn').addEventListener('click', async () => {
-    if (!currentUser) {
-        showNotification('Please sign in to upload videos', 'error');
-        return;
-    }
-    
-    const videoFile = document.getElementById('videoFile').files[0];
-    const coverFile = document.getElementById('coverFile').files[0];
-    const title = document.getElementById('videoTitle').value.trim();
-    const description = document.getElementById('videoDescription').value.trim();
-    
-    if(!videoFile || !coverFile || !title){ 
-        showNotification('Video, cover image, and title are required', 'error'); 
-        return; 
-    }
-
-    const progressBar = document.getElementById('progressBar'); 
-    progressBar.style.display = 'block'; 
-    progressBar.value = 0;
-
-    try {
-        // STEP 1: Prepare upload (get signed URLs)
-        progressBar.value = 10;
-        
-        const prepareRes = await fetch('/api/upload-video', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
-            body: JSON.stringify({
-                action: 'prepare',
-                videoInfo: {
-                    title: title,
-                    description: description,
-                    aiGenerated: false
-                },
-                fileInfo: {
-                    video: {
-                        name: videoFile.name,
-                        type: videoFile.type,
-                        size: videoFile.size
-                    },
-                    cover: {
-                        name: coverFile.name,
-                        type: coverFile.type
-                    }
-                }
-            })
-        });
-        
-        if (!prepareRes.ok) {
-            const errorText = await prepareRes.text();
-            throw new Error(`Failed to prepare upload: ${errorText}`);
-        }
-        
-        const prepareData = await prepareRes.json();
-        if (!prepareData.success) {
-            throw new Error(prepareData.error || 'Upload preparation failed');
-        }
-        
-        progressBar.value = 30;
-        
-        // STEP 2: Upload video directly to Supabase (bypasses Vercel limit)
-        const videoUploadRes = await fetch(prepareData.uploadInfo.signedUrls.video.signedUrl, {
-            method: 'PUT',
-            body: videoFile,
-            headers: { 'Content-Type': videoFile.type }
-        });
-        
-        if (!videoUploadRes.ok) {
-            throw new Error('Failed to upload video to storage');
-        }
-        
-        progressBar.value = 60;
-        
-        // STEP 3: Upload cover directly to Supabase
-        const coverUploadRes = await fetch(prepareData.uploadInfo.signedUrls.cover.signedUrl, {
-            method: 'PUT',
-            body: coverFile,
-            headers: { 'Content-Type': coverFile.type }
-        });
-        
-        if (!coverUploadRes.ok) {
-            console.warn('Cover upload failed, but video uploaded successfully');
-        }
-        
-        progressBar.value = 80;
-        
-        // STEP 4: Complete the upload (update database)
-        const completeRes = await fetch('/api/upload-video', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
-            body: JSON.stringify({
-                action: 'complete',
-                videoId: prepareData.uploadInfo.videoId,
-                success: true
-            })
-        });
-        
-        if (!completeRes.ok) {
-            const errorText = await completeRes.text();
-            throw new Error(`Failed to complete upload: ${errorText}`);
-        }
-        
-        const completeData = await completeRes.json();
-        if (!completeData.success) {
-            throw new Error(completeData.error || 'Upload completion failed');
-        }
-        
-        progressBar.value = 100;
-        
-        // Success!
-        showNotification('Video uploaded successfully!');
-        
-        // Reset form
-        document.getElementById('videoTitle').value = '';
-        document.getElementById('videoDescription').value = '';
-        document.getElementById('videoFile').value = '';
-        document.getElementById('coverFile').value = '';
-        
-        // Hide progress bar after a delay
-        setTimeout(() => {
-            progressBar.style.display = 'none';
-            progressBar.value = 0;
-            loadVideos(true); // Reload videos to show the new one
-        }, 1000);
-        
-    } catch (err) {
-        console.error('Upload error:', err);
-        showNotification(`Upload failed: ${err.message}`, 'error');
-        progressBar.style.display = 'none';
-        progressBar.value = 0;
-    }
-});
-
-// Format date
-function formatDate(dateString) {
+function formatRelativeTime(dateString) {
     const date = new Date(dateString);
     const now = new Date();
     const diffMs = now - date;
@@ -793,7 +1434,50 @@ function formatDate(dateString) {
     return date.toLocaleDateString();
 }
 
-// =============== REAL-TIME POLLING FUNCTIONS ===============
+function formatFileSize(bytes) {
+    if (bytes >= 1000000000) {
+        return (bytes / 1000000000).toFixed(1) + ' GB';
+    } else if (bytes >= 1000000) {
+        return (bytes / 1000000).toFixed(1) + ' MB';
+    } else if (bytes >= 1000) {
+        return (bytes / 1000).toFixed(1) + ' KB';
+    }
+    return bytes + ' B';
+}
+
+// =============== MOBILE AUTOPLAY ===============
+function initMobileObserver() {
+    if (!isMobile || !('IntersectionObserver' in window)) return;
+    
+    observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            const video = entry.target;
+            if (entry.isIntersecting) {
+                video.play().catch(() => {
+                    // Autoplay blocked, usually requires user interaction
+                    console.log('Autoplay blocked on mobile');
+                });
+            } else {
+                video.pause();
+            }
+        });
+    }, {
+        threshold: 0.5,
+        rootMargin: '50px'
+    });
+}
+
+function setupMobileVideoCards() {
+    if (!isMobile) return;
+    
+    document.querySelectorAll('.video-card video').forEach(video => {
+        video.muted = true;
+        video.playsInline = true;
+        if (observer) observer.observe(video);
+    });
+}
+
+// =============== REAL-TIME POLLING ===============
 function startRealTimePolling() {
     if (pollingInterval) clearInterval(pollingInterval);
     
@@ -801,269 +1485,664 @@ function startRealTimePolling() {
         if (!videosCache || videosCache.length === 0) return;
         
         try {
-            // Get video IDs for polling
             const videoIds = videosCache.map(v => v.id).join(',');
-            
-            // Fetch updated stats
-            const response = await fetch(`/api/view-videos?statsOnly=true&ids=${videoIds}&since=${lastUpdateCheck}`, {
-                credentials: 'include'
-            });
+            const response = await fetch(
+                `/api/view-videos?statsOnly=true&ids=${videoIds}&since=${lastUpdateCheck}`,
+                { credentials: 'include' }
+            );
             
             if (response.ok) {
                 const updates = await response.json();
-                
                 if (updates && updates.length > 0) {
                     updates.forEach(update => {
                         updateVideoStatsInUI(update);
                     });
                 }
-                
                 lastUpdateCheck = Date.now();
             }
         } catch (err) {
             console.error('Polling error:', err);
         }
-    }, 3000); // Poll every 3 seconds
+    }, POLLING_INTERVAL);
 }
 
 function updateVideoStatsInUI(stats) {
-    const videoElement = document.querySelector(`.video-item[data-video-id="${stats.id}"]`);
+    const videoElement = document.querySelector(`.video-card[data-video-id="${stats.id}"]`);
     if (!videoElement) return;
     
     // Update views
-    const viewsElement = videoElement.querySelector('.views-count');
+    const viewsElement = videoElement.querySelector('.video-stats span:first-child');
     if (viewsElement && stats.views !== undefined) {
-        viewsElement.textContent = stats.views;
+        viewsElement.textContent = `${formatNumber(stats.views)} views`;
     }
     
-    // Update likes count and button
-    const likeCountElement = videoElement.querySelector('.like-count');
+    // Update likes
+    const likeCount = videoElement.querySelector('.like-count');
     const likeButton = videoElement.querySelector('.like-btn');
     
-    if (likeCountElement && stats.likes !== undefined) {
-        likeCountElement.textContent = stats.likes;
+    if (likeCount && stats.likes !== undefined) {
+        likeCount.textContent = formatNumber(stats.likes);
     }
     
     if (likeButton && stats.hasLiked !== undefined) {
         if (stats.hasLiked) {
             likeButton.classList.add('liked');
-            likeButton.innerHTML = `<i class="fas fa-heart"></i> Liked`;
-            likeButton.setAttribute('onclick', `likeVideo('${stats.id}', true)`);
+            likeButton.innerHTML = `<i class="fas fa-heart"></i> <span class="like-count">${formatNumber(stats.likes)}</span>`;
         } else {
             likeButton.classList.remove('liked');
-            likeButton.innerHTML = `<i class="far fa-heart"></i> Like`;
-            likeButton.setAttribute('onclick', `likeVideo('${stats.id}', false)`);
+            likeButton.innerHTML = `<i class="far fa-heart"></i> <span class="like-count">${formatNumber(stats.likes)}</span>`;
         }
     }
+}
+
+// =============== USER MANAGEMENT ===============
+async function loadCurrentUser() {
+    try {
+        const res = await fetch('/api/me', { credentials: 'include' });
+        if (res.ok) {
+            const data = await res.json();
+            if (data.authenticated) {
+                currentUser = data.user;
+                updateUserUI();
+            }
+        }
+    } catch (err) {
+        console.error('Failed to load user:', err);
+    }
+}
+
+function updateUserUI() {
+    if (currentUser) {
+        const avatarUrl = currentUser.avatar_url || currentUser.profile_picture || 
+            `https://ui-avatars.com/api/?name=${encodeURIComponent(currentUser.username || currentUser.email)}&background=random`;
+        
+        document.getElementById('userAvatar').src = avatarUrl;
+        document.getElementById('commentAvatar').src = avatarUrl;
+        
+        document.getElementById('dropdownHeader').innerHTML = `
+            <h3>${currentUser.username || currentUser.email}</h3>
+            <p>${currentUser.email}</p>
+        `;
+        
+        document.getElementById('logoutBtn').style.display = 'block';
+        document.getElementById('loginBtn').style.display = 'none';
+        
+        // Enable comment form
+        document.getElementById('commentInput').placeholder = "Add a comment...";
+        document.getElementById('commentSubmitBtn').disabled = false;
+    } else {
+        document.getElementById('logoutBtn').style.display = 'none';
+        document.getElementById('loginBtn').style.display = 'block';
+        
+        // Disable comment form
+        document.getElementById('commentInput').placeholder = "Sign in to comment";
+        document.getElementById('commentSubmitBtn').disabled = true;
+    }
+}
+
+async function logout() {
+    try {
+        const res = await fetch('/api/logout', {
+            method: 'POST',
+            credentials: 'include'
+        });
+        
+        if (res.ok) {
+            currentUser = null;
+            userDropdown.classList.remove('show');
+            updateUserUI();
+            showNotification('Logged out successfully', 'success');
+            loadVideos(true);
+        }
+    } catch (err) {
+        showNotification('Logout failed', 'error');
+    }
+}
+
+// =============== VIDEO UPLOAD ===============
+function setupUploadHandlers() {
+    const uploadArea = document.getElementById('uploadArea');
+    const videoFileInput = document.getElementById('videoFile');
+    const selectFileBtn = document.getElementById('selectFileBtn');
+    const clearFileBtn = document.getElementById('clearFileBtn');
+    const uploadForm = document.getElementById('uploadForm');
     
-    // Update comment count
-    const commentStat = videoElement.querySelector('.comments-count');
-    if (commentStat && stats.commentCount !== undefined) {
-        commentStat.textContent = stats.commentCount;
+    // Drag and drop
+    uploadArea.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        uploadArea.classList.add('dragover');
+    });
+    
+    uploadArea.addEventListener('dragleave', (e) => {
+        e.preventDefault();
+        uploadArea.classList.remove('dragover');
+    });
+    
+    uploadArea.addEventListener('drop', (e) => {
+        e.preventDefault();
+        uploadArea.classList.remove('dragover');
+        
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+            handleVideoSelect(files[0]);
+        }
+    });
+    
+    // File selection
+    selectFileBtn.addEventListener('click', () => {
+        videoFileInput.click();
+    });
+    
+    videoFileInput.addEventListener('change', (e) => {
+        if (e.target.files.length > 0) {
+            handleVideoSelect(e.target.files[0]);
+        }
+    });
+    
+    // Clear file
+    clearFileBtn.addEventListener('click', () => {
+        videoFileInput.value = '';
+        document.getElementById('fileInfo').style.display = 'none';
+    });
+    
+    // Form submission
+    uploadForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        await handleUpload();
+    });
+}
+
+function handleVideoSelect(file) {
+    if (!file.type.startsWith('video/')) {
+        showNotification('Please select a video file', 'error');
+        return;
     }
     
-    // Add new comments if any
-    if (stats.newComments && stats.newComments.length > 0) {
-        const commentsSection = videoElement.querySelector('.commentsSection');
-        if (commentsSection) {
-            stats.newComments.forEach(comment => {
-                // Check if comment already exists
-                const existingComment = commentsSection.querySelector(`[data-comment-id="${comment.id}"]`);
-                if (!existingComment) {
-                    const commentDiv = document.createElement('div');
-                    commentDiv.className = 'comment';
-                    commentDiv.setAttribute('data-comment-id', comment.id);
-                    
-                    const userAvatar = comment.users?.avatar_url || comment.users?.profile_picture || 'https://via.placeholder.com/28';
-                    const userName = comment.users?.username || comment.users?.email || 'User';
-                    
-                    commentDiv.innerHTML = `
-                        <div class="comment-user">
-                            <img src="${userAvatar}" alt="${userName}">
-                            <span>${userName}</span>
-                        </div>
-                        <div class="comment-text">${comment.comment_text}</div>
-                        <div class="comment-meta">
-                            <span>${formatDate(comment.created_at)}</span>
-                        </div>
-                    `;
-                    commentsSection.appendChild(commentDiv);
+    if (file.size > 500 * 1024 * 1024) {
+        showNotification('File size must be less than 500MB', 'error');
+        return;
+    }
+    
+    const fileInfo = document.getElementById('fileInfo');
+    document.getElementById('fileName').textContent = file.name;
+    document.getElementById('fileSize').textContent = formatFileSize(file.size);
+    fileInfo.style.display = 'block';
+}
+
+async function handleUpload() {
+    if (!currentUser) {
+        showNotification('Please sign in to upload videos', 'error');
+        return;
+    }
+    
+    const videoFile = document.getElementById('videoFile').files[0];
+    const title = document.getElementById('videoTitle').value.trim();
+    
+    if (!videoFile) {
+        showNotification('Please select a video file', 'error');
+        return;
+    }
+    
+    if (!title) {
+        showNotification('Please enter a video title', 'error');
+        return;
+    }
+    
+    const formData = new FormData();
+    formData.append('video', videoFile);
+    formData.append('title', title);
+    formData.append('description', document.getElementById('videoDescription').value.trim());
+    formData.append('category', document.getElementById('videoCategory').value);
+    formData.append('privacy', document.getElementById('videoPrivacy').value);
+    formData.append('tags', document.getElementById('videoTags').value);
+    formData.append('settings', JSON.stringify({
+        allowComments: document.getElementById('allowComments').checked,
+        allowRatings: document.getElementById('allowRatings').checked,
+        showViewCount: document.getElementById('showViewCount').checked,
+        aiGenerated: document.getElementById('aiGenerated').checked
+    }));
+    
+    try {
+        showNotification('Uploading video...', 'info');
+        
+        const response = await fetch('/api/upload-video', {
+            method: 'POST',
+            body: formData,
+            credentials: 'include'
+        });
+        
+        if (response.ok) {
+            showNotification('Video uploaded successfully!', 'success');
+            closeUploadModal();
+            document.getElementById('fileInfo').style.display = 'none';
+            document.getElementById('uploadForm').reset();
+            loadVideos(true);
+        } else {
+            const error = await response.text();
+            showNotification(`Upload failed: ${error}`, 'error');
+        }
+    } catch (error) {
+        showNotification(`Upload error: ${error.message}`, 'error');
+    }
+}
+
+// =============== VIDEO LOADING & DISPLAY ===============
+async function loadVideos(reset = false, searchQuery = '') {
+    const videosList = document.getElementById('videosList');
+    
+    if (reset) {
+        displayedVideos = 0;
+        videosList.innerHTML = `
+            <div class="loading">
+                <div class="loading-spinner"></div>
+                <p>Loading videos...</p>
+            </div>
+        `;
+    }
+    
+    try {
+        const sortBy = document.getElementById('sortVideos').value;
+        let url = `/api/view-videos?sort=${sortBy}&limit=${VIDEOS_PER_PAGE}&offset=${displayedVideos}`;
+        
+        if (searchQuery) {
+            url += `&search=${encodeURIComponent(searchQuery)}`;
+        }
+        
+        const response = await fetch(url, { credentials: 'include' });
+        
+        if (!response.ok) throw new Error('Failed to load videos');
+        
+        const videos = await response.json();
+        
+        if (reset) {
+            videosCache = videos;
+            videosList.innerHTML = '';
+        } else {
+            videosCache = [...videosCache, ...videos];
+        }
+        
+        if (videos.length === 0) {
+            if (reset) {
+                videosList.innerHTML = `
+                    <div style="grid-column: 1/-1; text-align: center; padding: 48px; color: var(--text-tertiary);">
+                        <i class="fas fa-video-slash" style="font-size: 48px; margin-bottom: 16px;"></i>
+                        <h3>No videos found</h3>
+                        <p>${searchQuery ? 'Try a different search term' : 'Be the first to upload a video!'}</p>
+                    </div>
+                `;
+            }
+            document.getElementById('loadMoreContainer').style.display = 'none';
+            return;
+        }
+        
+        renderVideos(videos, reset);
+        displayedVideos += videos.length;
+        
+        document.getElementById('loadMoreContainer').style.display = 
+            videos.length === VIDEOS_PER_PAGE ? 'block' : 'none';
+        
+        // Setup mobile autoplay
+        if (isMobile) {
+            setupMobileVideoCards();
+        }
+        
+        // Start real-time polling
+        if (!pollingInterval) {
+            startRealTimePolling();
+        }
+        
+    } catch (error) {
+        showNotification(`Failed to load videos: ${error.message}`, 'error');
+        videosList.innerHTML = `
+            <div style="grid-column: 1/-1; text-align: center; padding: 48px; color: var(--text-tertiary);">
+                <i class="fas fa-exclamation-triangle" style="font-size: 48px; margin-bottom: 16px;"></i>
+                <h3>Failed to load videos</h3>
+                <p>Please try again later</p>
+            </div>
+        `;
+    }
+}
+
+function renderVideos(videos, reset = false) {
+    const videosList = document.getElementById('videosList');
+    
+    if (reset) videosList.innerHTML = '';
+    
+    videos.forEach(video => {
+        const videoCard = document.createElement('div');
+        videoCard.className = 'video-card';
+        videoCard.setAttribute('data-video-id', video.id);
+        
+        const thumbnail = video.cover_url || 'https://via.placeholder.com/320x180?text=No+Thumbnail';
+        const duration = video.duration ? formatDuration(video.duration) : '--:--';
+        const views = video.views ? formatNumber(video.views) : '0';
+        const uploadTime = video.created_at ? formatRelativeTime(video.created_at) : 'Recently';
+        
+        videoCard.innerHTML = `
+            <div class="video-thumbnail">
+                <img src="${thumbnail}" alt="${video.title || 'Video'}">
+                <span class="video-duration">${duration}</span>
+            </div>
+            <div class="video-info">
+                <img src="${video.user?.avatar_url || 'https://ui-avatars.com/api/?name=User&background=random'}" 
+                     alt="${video.user?.username || 'User'}" 
+                     class="channel-avatar">
+                <div>
+                    <h3 class="video-title">${video.title || 'Untitled Video'}</h3>
+                    <p class="channel-name">${video.user?.username || 'User'}</p>
+                    <div class="video-stats">
+                        <span>${views} views</span>
+                        •
+                        <span>${uploadTime}</span>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        // Add video element for mobile autoplay
+        if (isMobile) {
+            const videoElement = document.createElement('video');
+            videoElement.muted = true;
+            videoElement.playsInline = true;
+            videoElement.style.display = 'none';
+            videoElement.src = video.video_url;
+            videoCard.appendChild(videoElement);
+        }
+        
+        videoCard.addEventListener('click', () => openVideoModal(video));
+        
+        // Desktop hover effects
+        if (!isMobile) {
+            videoCard.addEventListener('mouseenter', () => {
+                const videoElement = videoCard.querySelector('video');
+                if (videoElement) {
+                    videoElement.play().catch(() => {});
+                }
+            });
+            
+            videoCard.addEventListener('mouseleave', () => {
+                const videoElement = videoCard.querySelector('video');
+                if (videoElement) {
+                    videoElement.pause();
+                    videoElement.currentTime = 0;
                 }
             });
         }
+        
+        videosList.appendChild(videoCard);
+    });
+}
+
+// =============== VIDEO MODAL ===============
+async function openVideoModal(video) {
+    currentVideo = video;
+    const modal = document.getElementById('videoModal');
+    const player = document.getElementById('modalVideo');
+    
+    // Set video player
+    player.src = video.video_url;
+    player.poster = video.cover_url;
+    
+    // Set video info
+    document.getElementById('modalVideoTitle').textContent = video.title || 'Untitled Video';
+    document.getElementById('modalVideoMeta').innerHTML = `
+        <span>${formatNumber(video.views || 0)} views</span>
+        •
+        <span>${formatRelativeTime(video.created_at)}</span>
+    `;
+    
+    // Set description
+    const descShort = document.getElementById('videoDescriptionShort');
+    const descFull = document.getElementById('videoDescriptionFull');
+    const toggleBtn = document.getElementById('descriptionToggleBtn');
+    
+    if (video.description) {
+        const shortText = video.description.substring(0, 200);
+        descShort.textContent = shortText;
+        descFull.textContent = video.description;
+        
+        if (video.description.length > 200) {
+            toggleBtn.style.display = 'block';
+            toggleBtn.onclick = toggleDescription;
+        } else {
+            toggleBtn.style.display = 'none';
+        }
+    } else {
+        descShort.textContent = 'No description provided';
+        descFull.textContent = '';
+        toggleBtn.style.display = 'none';
+    }
+    
+    // Load likes
+    await loadVideoLikes();
+    
+    // Load comments
+    await loadComments(true);
+    
+    // Load recommended videos
+    await loadRecommendedVideos();
+    
+    // Show modal
+    modal.classList.add('show');
+    document.body.style.overflow = 'hidden';
+    
+    // Play video
+    player.play().catch(() => {});
+    
+    // Track view
+    trackView(video.id);
+}
+
+function closeVideoModal() {
+    const modal = document.getElementById('videoModal');
+    const player = document.getElementById('modalVideo');
+    
+    player.pause();
+    player.src = '';
+    modal.classList.remove('show');
+    document.body.style.overflow = '';
+    currentVideo = null;
+}
+
+function toggleDescription() {
+    const short = document.getElementById('videoDescriptionShort');
+    const full = document.getElementById('videoDescriptionFull');
+    const toggleBtn = document.getElementById('descriptionToggleBtn');
+    
+    if (full.style.display === 'none') {
+        short.style.display = 'none';
+        full.style.display = 'block';
+        toggleBtn.textContent = 'Show less';
+    } else {
+        short.style.display = 'block';
+        full.style.display = 'none';
+        toggleBtn.textContent = 'Show more';
     }
 }
 
-// =============== RENDER VIDEOS FUNCTION ===============
-function renderVideos(videos) {
-    const list = document.getElementById('videosList');
-    const loading = document.getElementById('loadingVideos');
+// =============== LIKES ===============
+async function loadVideoLikes() {
+    if (!currentVideo || !currentUser) return;
     
-    if (loading) loading.style.display = 'none';
-    
-    const searchTerm = document.getElementById('searchInput').value.toLowerCase();
-    const filtered = videos.filter(v => 
-        (v.user?.email || '').toLowerCase().includes(searchTerm) || 
-        (v.user?.username || '').toLowerCase().includes(searchTerm) || 
-        (v.title || '').toLowerCase().includes(searchTerm) ||
-        (v.description || '').toLowerCase().includes(searchTerm)
-    );
-    
-    const batch = filtered.slice(displayedCount, displayedCount + pageSize);
-
-    batch.forEach(video => {
-        const div = document.createElement('div'); 
-        div.className = 'video-item';
-        div.setAttribute('data-video-id', video.id); // CRITICAL FOR POLLING
-        
-        // Get user info properly - check both avatar_url and profile_picture
-        const userAvatar = video.user?.avatar_url || video.user?.profile_picture || 'https://via.placeholder.com/42';
-        const userName = video.user?.username || video.user?.email || 'User';
-        
-        div.innerHTML = `
-            <div class="user-info">
-                <img src="${userAvatar}" alt="${userName}">
-                <div class="user-details">
-                    <div class="username">${userName}</div>
-                    <div class="upload-time">${formatDate(video.uploaded_at)} • ${video.likes || 0} likes</div>
-                </div>
-            </div>
-            
-            <div class="video-meta">
-                <div class="video-title">${video.title || 'Untitled Video'}</div>
-                ${video.description ? `<div class="video-description">${video.description}</div>` : ''}
-            </div>
-            
-            <div style="position: relative;">
-                <video muted preload="metadata" poster="${video.coverUrl || ''}" playsinline>
-                    <source src="${video.videoUrl || ''}" type="video/mp4">
-                </video>
-                <span class="video-duration">--:--</span>
-            </div>
-            
-            <div class="video-stats">
-                <div class="stat">
-                    <i class="fas fa-eye"></i>
-                    <span class="views-count">${video.views || 0}</span> views
-                </div>
-                <div class="stat">
-                    <i class="fas fa-comment"></i>
-                    <span class="comments-count">${video.comments?.length || 0}</span> comments
-                </div>
-            </div>
-            
-            <div class="video-actions">
-                <button class="like-btn ${video.hasLiked ? 'liked' : ''}" data-video-id="${video.id}" onclick="likeVideo('${video.id}', ${video.hasLiked || false})">
-                    <i class="${video.hasLiked ? 'fas' : 'far'} fa-heart"></i>
-                    <span class="like-count" data-video-id="${video.id}">${video.likes || 0}</span>
-                </button>
-                <button class="shareBtn action-btn" onclick="shareVideo('${video.videoUrl}')">
-                    <i class="fas fa-share"></i> Share
-                </button>
-            </div>
-            
-            <div class="commentsSection"></div>
-            
-            ${currentUser ? `
-                <div class="new-comment">
-                    <input type="text" placeholder="Write a comment..." id="comment-input-${video.id}">
-                    <button onclick="postComment('${video.id}')">Post</button>
-                </div>
-            ` : '<p style="text-align: center; opacity: 0.7;">Sign in to comment</p>'}
-        `;
-        list.appendChild(div);
-
-        const vid = div.querySelector('video');
-        const dur = div.querySelector('.video-duration');
-        
-        vid.addEventListener('loadedmetadata', () => { 
-            if (vid.duration) {
-                const minutes = Math.floor(vid.duration / 60);
-                const seconds = Math.floor(vid.duration % 60);
-                dur.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`; 
-            }
+    try {
+        const response = await fetch(`/api/like-video?videoId=${currentVideo.id}`, {
+            credentials: 'include'
         });
-
-        if(!isMobile) {
-            div.addEventListener('mouseenter', () => { 
-                vid.play().catch(() => {}); 
-                dur.style.opacity = '1'; 
-            });
-            
-            div.addEventListener('mouseleave', () => { 
-                vid.pause(); 
-                vid.currentTime = 0; 
-                dur.style.opacity = '0'; 
-            });
-            
-            vid.addEventListener('click', () => openModal(video.videoUrl));
-        } else { 
-            if(observer) observer.observe(vid); 
+        
+        if (response.ok) {
+            const data = await response.json();
+            updateLikeButton(data);
         }
+    } catch (error) {
+        console.error('Failed to load likes:', error);
+    }
+}
 
-        // Render existing comments
-        const commentsDiv = div.querySelector('.commentsSection');
-        (video.comments || []).forEach(c => {
-            const cDiv = document.createElement('div'); 
-            cDiv.className = 'comment';
-            cDiv.setAttribute('data-comment-id', c.id);
-            
-            const commentUserAvatar = c.user?.avatar_url || c.user?.profile_picture || 'https://via.placeholder.com/28';
-            const commentUserName = c.user?.username || c.user?.email || 'User';
-            
-            cDiv.innerHTML = `
-                <div class="comment-user">
-                    <img src="${commentUserAvatar}" alt="${commentUserName}">
-                    <span>${commentUserName}</span>
-                </div>
-                <div class="comment-text">${c.text || ''}</div>
-                <div class="comment-meta">
-                    <span>${formatDate(c.created_at)}</span>
-                    ${c.likes ? `<span><i class="fas fa-heart"></i> ${c.likes}</span>` : ''}
+async function toggleLike() {
+    if (!currentVideo || !currentUser) {
+        showNotification('Please sign in to like videos', 'error');
+        return;
+    }
+    
+    try {
+        const response = await fetch('/api/like-video', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({
+                videoId: currentVideo.id,
+                action: currentVideo.hasLiked ? 'unlike' : 'like'
+            })
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            currentVideo.hasLiked = data.liked;
+            currentVideo.likes = data.likes;
+            updateLikeButton(data);
+        }
+    } catch (error) {
+        showNotification('Failed to update like', 'error');
+    }
+}
+
+function updateLikeButton(data) {
+    const likeBtn = document.getElementById('likeBtn');
+    const likeCount = document.getElementById('likeCount');
+    
+    likeCount.textContent = formatNumber(data.likes || 0);
+    
+    if (data.liked) {
+        likeBtn.innerHTML = `<i class="fas fa-thumbs-up"></i> <span id="likeCount">${likeCount.textContent}</span>`;
+        likeBtn.classList.add('liked');
+    } else {
+        likeBtn.innerHTML = `<i class="far fa-thumbs-up"></i> <span id="likeCount">${likeCount.textContent}</span>`;
+        likeBtn.classList.remove('liked');
+    }
+}
+
+// =============== YOUTUBE-STYLE COMMENTS ===============
+async function loadComments(reset = false) {
+    if (!currentVideo) return;
+    
+    const commentsList = document.getElementById('commentsList');
+    const sort = document.getElementById('commentsSort').value;
+    
+    if (reset) {
+        commentsCache[currentVideo.id] = { comments: [], page: 0, total: 0 };
+        commentsList.innerHTML = `
+            <div class="loading">
+                <div class="loading-spinner"></div>
+                <p>Loading comments...</p>
+            </div>
+        `;
+    }
+    
+    const cache = commentsCache[currentVideo.id] || { comments: [], page: 0, total: 0 };
+    const page = reset ? 0 : cache.page;
+    
+    try {
+        const response = await fetch(
+            `/api/video-comments?videoId=${currentVideo.id}&sort=${sort}&limit=${COMMENTS_PER_PAGE}&offset=${page * COMMENTS_PER_PAGE}`,
+            { credentials: 'include' }
+        );
+        
+        if (!response.ok) throw new Error('Failed to load comments');
+        
+        const data = await response.json();
+        const comments = data.comments || [];
+        const total = data.total || 0;
+        
+        document.getElementById('commentsCount').textContent = `${formatNumber(total)} Comments`;
+        
+        if (reset) {
+            cache.comments = comments;
+            cache.total = total;
+            commentsList.innerHTML = '';
+        } else {
+            cache.comments = [...cache.comments, ...comments];
+        }
+        
+        cache.page = page + 1;
+        commentsCache[currentVideo.id] = cache;
+        
+        if (comments.length === 0 && reset) {
+            commentsList.innerHTML = `
+                <div style="text-align: center; padding: 48px; color: var(--text-tertiary);">
+                    <i class="fas fa-comment-slash" style="font-size: 48px; margin-bottom: 16px;"></i>
+                    <h3>No comments yet</h3>
+                    <p>Be the first to comment!</p>
                 </div>
             `;
-            commentsDiv.appendChild(cDiv);
-        });
-    });
-
-    displayedCount += batch.length;
-    document.getElementById('totalVideos').innerText = `Showing ${displayedCount} of ${filtered.length} videos`;
-    document.getElementById('loadMoreBtn').style.display = (displayedCount < filtered.length) ? 'block' : 'none';
-}
-
-// Share video function
-function shareVideo(url) {
-    if (navigator.share) {
-        navigator.share({
-            title: 'Check out this video on Vibro.x',
-            url: url
-        });
-    } else {
-        navigator.clipboard.writeText(url).then(() => {
-            showNotification('Link copied to clipboard!');
-        }).catch(() => {
-            showNotification('Failed to copy link', 'error');
-        });
+            document.getElementById('loadMoreComments').style.display = 'none';
+            return;
+        }
+        
+        renderComments(comments, reset);
+        
+        document.getElementById('loadMoreComments').style.display = 
+            comments.length === COMMENTS_PER_PAGE ? 'block' : 'none';
+        
+    } catch (error) {
+        showNotification(`Failed to load comments: ${error.message}`, 'error');
+        commentsList.innerHTML = `
+            <div style="text-align: center; padding: 48px; color: var(--text-tertiary);">
+                <i class="fas fa-exclamation-triangle" style="font-size: 48px; margin-bottom: 16px;"></i>
+                <h3>Failed to load comments</h3>
+            </div>
+        `;
     }
 }
 
-// Post comment function
-async function postComment(videoId) {
-    if (!currentUser) {
+function renderComments(comments, reset = false) {
+    const commentsList = document.getElementById('commentsList');
+    
+    if (reset) commentsList.innerHTML = '';
+    
+    comments.forEach(comment => {
+        const commentDiv = document.createElement('div');
+        commentDiv.className = 'comment-item';
+        commentDiv.setAttribute('data-comment-id', comment.id);
+        
+        const userAvatar = comment.user?.avatar_url || comment.user?.profile_picture || 
+            `https://ui-avatars.com/api/?name=${encodeURIComponent(comment.user?.username || comment.user?.email || 'User')}&background=random`;
+        
+        commentDiv.innerHTML = `
+            <img src="${userAvatar}" alt="${comment.user?.username || 'User'}" class="comment-avatar">
+            <div class="comment-content">
+                <div class="comment-header">
+                    <span class="comment-author">${comment.user?.username || 'User'}</span>
+                    <span class="comment-time">${formatRelativeTime(comment.created_at)}</span>
+                </div>
+                <div class="comment-text">${comment.text || ''}</div>
+                <div class="comment-actions">
+                    <button class="comment-like ${comment.hasLiked ? 'liked' : ''}">
+                        <i class="${comment.hasLiked ? 'fas' : 'far'} fa-thumbs-up"></i>
+                        <span>${formatNumber(comment.likes || 0)}</span>
+                    </button>
+                    <button class="comment-reply">
+                        Reply
+                    </button>
+                </div>
+            </div>
+        `;
+        
+        // Add event listeners
+        const likeBtn = commentDiv.querySelector('.comment-like');
+        likeBtn.addEventListener('click', () => likeComment(comment.id, comment.hasLiked));
+        
+        commentsList.appendChild(commentDiv);
+    });
+}
+
+async function postComment() {
+    if (!currentVideo || !currentUser) {
         showNotification('Please sign in to comment', 'error');
         return;
     }
     
-    // Find the video item
-    const videoItem = document.querySelector(`.video-item[data-video-id="${videoId}"]`);
-    
-    if (!videoItem) {
-        showNotification('Could not find video', 'error');
-        return;
-    }
-    
-    const input = videoItem.querySelector(`#comment-input-${videoId}`);
-    const text = input?.value.trim();
+    const commentInput = document.getElementById('commentInput');
+    const text = commentInput.value.trim();
     
     if (!text) {
         showNotification('Comment cannot be empty', 'error');
@@ -1071,129 +2150,223 @@ async function postComment(videoId) {
     }
     
     try {
-        const res = await fetch(`/api/view-videos?videoId=${videoId}`, {
-            method: 'POST', 
-            headers: {'Content-Type': 'application/json'}, 
-            credentials: 'include', 
-            body: JSON.stringify({text})
+        const response = await fetch(`/api/video-comments?videoId=${currentVideo.id}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ text })
         });
         
-        if (res.ok) { 
-            const comment = await res.json();
-            const commentsDiv = videoItem.querySelector('.commentsSection');
+        if (response.ok) {
+            const comment = await response.json();
+            commentInput.value = '';
             
-            if (commentsDiv) {
-                const cDiv = document.createElement('div'); 
-                cDiv.className = 'comment';
-                cDiv.setAttribute('data-comment-id', comment.id);
-                
-                const userAvatar = comment.user?.avatar_url || currentUser.avatar_url || currentUser.profile_picture || 'https://via.placeholder.com/28';
-                const userName = comment.user?.username || currentUser.username || currentUser.email || 'User';
-                
-                cDiv.innerHTML = `
-                    <div class="comment-user">
-                        <img src="${userAvatar}" alt="${userName}">
-                        <span>${userName}</span>
-                    </div>
-                    <div class="comment-text">${comment.text}</div>
-                    <div class="comment-meta">
-                        <span>Just now</span>
-                    </div>
-                `;
-                commentsDiv.appendChild(cDiv);
-            }
+            // Add comment to UI
+            const commentsList = document.getElementById('commentsList');
+            const commentDiv = document.createElement('div');
+            commentDiv.className = 'comment-item';
+            commentDiv.setAttribute('data-comment-id', comment.id);
             
-            input.value = '';
+            const userAvatar = currentUser.avatar_url || currentUser.profile_picture || 
+                `https://ui-avatars.com/api/?name=${encodeURIComponent(currentUser.username || currentUser.email)}&background=random`;
+            
+            commentDiv.innerHTML = `
+                <img src="${userAvatar}" alt="${currentUser.username || 'User'}" class="comment-avatar">
+                <div class="comment-content">
+                    <div class="comment-header">
+                        <span class="comment-author">${currentUser.username || 'User'}</span>
+                        <span class="comment-time">Just now</span>
+                    </div>
+                    <div class="comment-text">${text}</div>
+                    <div class="comment-actions">
+                        <button class="comment-like">
+                            <i class="far fa-thumbs-up"></i>
+                            <span>0</span>
+                        </button>
+                        <button class="comment-reply">
+                            Reply
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            // Add to top of comments
+            commentsList.insertBefore(commentDiv, commentsList.firstChild);
             
             // Update comment count
-            const commentStat = videoItem.querySelector('.comments-count');
-            if (commentStat) {
-                const currentCount = parseInt(commentStat.textContent) || 0;
-                commentStat.textContent = currentCount + 1;
-            }
+            const commentsCount = document.getElementById('commentsCount');
+            const currentCount = parseInt(commentsCount.textContent) || 0;
+            commentsCount.textContent = `${formatNumber(currentCount + 1)} Comments`;
             
-            showNotification('Comment posted!');
-        } else {
-            const errorText = await res.text();
-            showNotification('Failed to post comment: ' + errorText, 'error');
+            showNotification('Comment posted!', 'success');
         }
-    } catch(err) { 
-        console.error('Comment error:', err);
-        showNotification('Error: ' + err.message, 'error');
+    } catch (error) {
+        showNotification('Failed to post comment', 'error');
     }
 }
 
-// Load videos
-async function loadVideos(reset = false) {
-    if (reset) { 
-        displayedCount = 0; 
-        const list = document.getElementById('videosList');
-        list.innerHTML = '<div class="loading" id="loadingVideos"><i class="fas fa-spinner"></i><p>Loading videos...</p></div>';
+async function likeComment(commentId, isLiked) {
+    if (!currentUser) {
+        showNotification('Please sign in to like comments', 'error');
+        return;
     }
     
     try {
-        const res = await fetch('/api/view-videos', {
-            method: 'GET',
-            credentials: 'include'
+        const response = await fetch(`/api/like-comment`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({
+                commentId: commentId,
+                action: isLiked ? 'unlike' : 'like'
+            })
         });
         
-        if (!res.ok) { 
-            showNotification('Failed to load videos: ' + await res.text(), 'error'); 
-            return; 
+        if (response.ok) {
+            const data = await response.json();
+            const commentDiv = document.querySelector(`.comment-item[data-comment-id="${commentId}"]`);
+            if (commentDiv) {
+                const likeBtn = commentDiv.querySelector('.comment-like');
+                const likeCount = commentDiv.querySelector('.comment-like span');
+                
+                if (likeBtn && likeCount) {
+                    likeBtn.classList.toggle('liked', data.liked);
+                    likeBtn.innerHTML = `<i class="${data.liked ? 'fas' : 'far'} fa-thumbs-up"></i> <span>${formatNumber(data.likes)}</span>`;
+                }
+            }
         }
-        
-        videosCache = await res.json();
-        if (!observer) initObserver();
-        
-        // Clear loading message
-        const loading = document.getElementById('loadingVideos');
-        if (loading && reset) loading.remove();
-        
-        renderVideos(videosCache);
-        
-        // Start real-time polling after loading videos
-        if (!pollingInterval) {
-            startRealTimePolling();
-        }
-    } catch(err) { 
-        showNotification('Failed to load videos: ' + err.message, 'error');
+    } catch (error) {
+        showNotification('Failed to like comment', 'error');
     }
 }
 
-// Initialize page
-window.addEventListener('DOMContentLoaded', async () => {
+// =============== OTHER FUNCTIONS ===============
+async function loadRecommendedVideos() {
+    // Simplified - in production, you'd fetch recommended videos based on current video
+    const recommendedVideos = document.getElementById('recommendedVideos');
+    recommendedVideos.innerHTML = `
+        <div style="text-align: center; padding: 20px; color: var(--text-tertiary);">
+            <p>Recommended videos will appear here</p>
+        </div>
+    `;
+}
+
+async function trackView(videoId) {
+    try {
+        await fetch(`/api/track-view?videoId=${videoId}`, {
+            method: 'POST',
+            credentials: 'include'
+        });
+    } catch (error) {
+        console.error('Failed to track view:', error);
+    }
+}
+
+function openSettings() {
+    showNotification('Settings feature coming soon!', 'info');
+}
+
+function shareVideo() {
+    if (navigator.share) {
+        navigator.share({
+            title: currentVideo.title || 'Check out this video',
+            text: 'Watch this video on Vibro.x',
+            url: window.location.href
+        });
+    } else {
+        navigator.clipboard.writeText(window.location.href).then(() => {
+            showNotification('Link copied to clipboard!', 'success');
+        }).catch(() => {
+            showNotification('Failed to copy link', 'error');
+        });
+    }
+}
+
+// =============== INITIALIZATION ===============
+document.addEventListener('DOMContentLoaded', async () => {
+    // Setup event listeners
+    document.getElementById('userAvatar').addEventListener('click', () => {
+        document.getElementById('userDropdown').classList.toggle('show');
+    });
+    
+    document.getElementById('uploadBtn').addEventListener('click', () => {
+        document.getElementById('uploadSection').style.display = 'block';
+        document.getElementById('videosSection').style.display = 'none';
+    });
+    
+    document.getElementById('cancelUploadBtn').addEventListener('click', () => {
+        document.getElementById('uploadSection').style.display = 'none';
+        document.getElementById('videosSection').style.display = 'block';
+    });
+    
+    document.getElementById('closeModalBtn').addEventListener('click', closeVideoModal);
+    document.getElementById('likeBtn').addEventListener('click', toggleLike);
+    document.getElementById('shareBtn').addEventListener('click', shareVideo);
+    document.getElementById('commentSubmitBtn').addEventListener('click', postComment);
+    document.getElementById('loadMoreBtn').addEventListener('click', () => loadVideos(false));
+    document.getElementById('loadMoreCommentsBtn').addEventListener('click', () => loadComments(false));
+    document.getElementById('logoutBtn').addEventListener('click', logout);
+    document.getElementById('loginBtn').addEventListener('click', () => window.location.href = '/login');
+    document.getElementById('settingsBtn').addEventListener('click', openSettings);
+    
+    // Search
+    document.getElementById('searchButton').addEventListener('click', () => {
+        const query = document.getElementById('searchInput').value;
+        if (query) loadVideos(true, query);
+    });
+    
+    document.getElementById('searchInput').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            const query = document.getElementById('searchInput').value;
+            if (query) loadVideos(true, query);
+        }
+    });
+    
+    // Sort changes
+    document.getElementById('sortVideos').addEventListener('change', () => loadVideos(true));
+    document.getElementById('commentsSort').addEventListener('change', () => loadComments(true));
+    
+    // Close modals on outside click
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('.user-menu') && document.getElementById('userDropdown').classList.contains('show')) {
+            document.getElementById('userDropdown').classList.remove('show');
+        }
+        
+        if (e.target.classList.contains('video-modal')) {
+            closeVideoModal();
+        }
+    });
+    
+    // Keyboard shortcuts
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            closeVideoModal();
+            if (document.getElementById('uploadSection').style.display !== 'none') {
+                document.getElementById('uploadSection').style.display = 'none';
+                document.getElementById('videosSection').style.display = 'block';
+            }
+        }
+    });
+    
+    // Setup upload handlers
+    setupUploadHandlers();
+    
+    // Initialize mobile autoplay
+    initMobileObserver();
+    
+    // Load data
     await loadCurrentUser();
-    loadVideos();
-});
-
-document.getElementById('loadMoreBtn').addEventListener('click', () => renderVideos(videosCache));
-
-document.getElementById('searchInput').addEventListener('input', () => { 
-    displayedCount = 0; 
-    const list = document.getElementById('videosList');
-    list.innerHTML = '';
-    renderVideos(videosCache); 
-});
-
-// Close modal when clicking outside
-document.getElementById('videoModal').addEventListener('click', (e) => {
-    if (e.target.id === 'videoModal') {
-        closeModal();
-    }
-});
-
-// Keyboard shortcuts
-document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') {
-        closeModal();
-    }
-});
-
-// Clean up polling on page unload
-window.addEventListener('beforeunload', () => {
-    if (pollingInterval) {
-        clearInterval(pollingInterval);
-    }
+    await loadVideos(true);
+    
+    // Clean up on page unload
+    window.addEventListener('beforeunload', () => {
+        if (pollingInterval) {
+            clearInterval(pollingInterval);
+        }
+        if (observer) {
+            observer.disconnect();
+        }
+    });
 });
 </script>
 </body>
