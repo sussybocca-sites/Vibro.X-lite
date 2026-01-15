@@ -1748,11 +1748,30 @@ async function loadVideos(reset = false, searchQuery = '') {
             url += `&search=${encodeURIComponent(searchQuery)}`;
         }
         
+        console.log('📹 Fetching videos from:', url);
         const response = await fetch(url, { credentials: 'include' });
         
-        if (!response.ok) throw new Error('Failed to load videos');
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error('❌ Failed to load videos:', errorText);
+            throw new Error(`Failed to load videos: ${response.status}`);
+        }
         
         const videos = await response.json();
+        console.log(`✅ Loaded ${videos.length} videos`);
+        
+        // Debug: Log first video structure
+        if (videos.length > 0) {
+            console.log('📊 First video data:', {
+                id: videos[0].id,
+                title: videos[0].title,
+                video_url: videos[0].video_url?.substring(0, 50),
+                cover_url: videos[0].cover_url,
+                user: videos[0].user,
+                views: videos[0].views,
+                duration: videos[0].duration
+            });
+        }
         
         if (reset) {
             videosCache = videos;
@@ -1792,6 +1811,7 @@ async function loadVideos(reset = false, searchQuery = '') {
         }
         
     } catch (error) {
+        console.error('❌ Load videos error:', error);
         showNotification(`Failed to load videos: ${error.message}`, 'error');
         videosList.innerHTML = `
             <div style="grid-column: 1/-1; text-align: center; padding: 48px; color: var(--text-tertiary);">
@@ -1813,55 +1833,74 @@ function renderVideos(videos, reset = false) {
         videoCard.className = 'video-card';
         videoCard.setAttribute('data-video-id', video.id);
         
-        const thumbnail = video.cover_url || 'https://via.placeholder.com/320x180?text=No+Thumbnail';
+        // Use cover_url property (not coverUrl)
+        const thumbnail = video.cover_url || 'https://images.unsplash.com/photo-1611605698335-8b1569810435?w=800&h=450&fit=crop';
         const duration = video.duration ? formatDuration(video.duration) : '--:--';
         const views = video.views ? formatNumber(video.views) : '0';
-        const uploadTime = video.created_at ? formatRelativeTime(video.created_at) : 'Recently';
+        // Use uploaded_at if available, fallback to created_at
+        const uploadTime = video.uploaded_at ? formatRelativeTime(video.uploaded_at) : 
+                          (video.created_at ? formatRelativeTime(video.created_at) : 'Recently');
+        
+        // Get user avatar URL - use avatar_url or profile_picture
+        const userAvatar = video.user?.avatar_url || video.user?.profile_picture || 
+            `https://ui-avatars.com/api/?name=${encodeURIComponent(video.user?.username || video.user?.email || 'User')}&background=random`;
         
         videoCard.innerHTML = `
             <div class="video-thumbnail">
-                <img src="${thumbnail}" alt="${video.title || 'Video'}">
+                <img src="${thumbnail}" alt="${video.title || 'Video'}" 
+                     onerror="this.src='https://images.unsplash.com/photo-1611605698335-8b1569810435?w=800&h=450&fit=crop'">
                 <span class="video-duration">${duration}</span>
             </div>
             <div class="video-info">
-                <img src="${video.user?.avatar_url || 'https://ui-avatars.com/api/?name=User&background=random'}" 
+                <img src="${userAvatar}" 
                      alt="${video.user?.username || 'User'}" 
-                     class="channel-avatar">
+                     class="channel-avatar"
+                     onerror="this.src='https://ui-avatars.com/api/?name=User&background=random'">
                 <div>
                     <h3 class="video-title">${video.title || 'Untitled Video'}</h3>
-                    <p class="channel-name">${video.user?.username || 'User'}</p>
+                    <p class="channel-name">${video.user?.username || video.user?.email?.split('@')[0] || 'User'}</p>
                     <div class="video-stats">
                         <span>${views} views</span>
                         •
                         <span>${uploadTime}</span>
+                        ${video.ai_generated ? '• <span><i class="fas fa-robot"></i> AI</span>' : ''}
                     </div>
                 </div>
             </div>
         `;
         
-        // Add video element for mobile autoplay
-        if (isMobile) {
+        // Add video element for mobile autoplay if video_url exists
+        if (isMobile && video.video_url) {
             const videoElement = document.createElement('video');
             videoElement.muted = true;
             videoElement.playsInline = true;
             videoElement.style.display = 'none';
+            videoElement.preload = 'metadata';
             videoElement.src = video.video_url;
             videoCard.appendChild(videoElement);
         }
         
         videoCard.addEventListener('click', () => openVideoModal(video));
         
-        // Desktop hover effects
-        if (!isMobile) {
+        // Desktop hover effects - create video element for hover
+        if (!isMobile && video.video_url) {
+            const videoElement = document.createElement('video');
+            videoElement.muted = true;
+            videoElement.playsInline = true;
+            videoElement.style.display = 'none';
+            videoElement.preload = 'metadata';
+            videoElement.src = video.video_url;
+            videoCard.appendChild(videoElement);
+            
             videoCard.addEventListener('mouseenter', () => {
-                const videoElement = videoCard.querySelector('video');
                 if (videoElement) {
-                    videoElement.play().catch(() => {});
+                    videoElement.play().catch((e) => {
+                        console.log('Hover play failed:', e.message);
+                    });
                 }
             });
             
             videoCard.addEventListener('mouseleave', () => {
-                const videoElement = videoCard.querySelector('video');
                 if (videoElement) {
                     videoElement.pause();
                     videoElement.currentTime = 0;
@@ -1879,16 +1918,37 @@ async function openVideoModal(video) {
     const modal = document.getElementById('videoModal');
     const player = document.getElementById('modalVideo');
     
-    // Set video player
-    player.src = video.video_url;
-    player.poster = video.cover_url;
+    console.log('🎬 Opening video modal:', {
+        id: video.id,
+        title: video.title,
+        video_url: video.video_url?.substring(0, 50),
+        cover_url: video.cover_url
+    });
+    
+    // Set video player - use video_url property
+    if (video.video_url) {
+        player.src = video.video_url;
+    } else if (video.videoUrl) {
+        player.src = video.videoUrl; // Fallback
+    }
+    
+    // Set poster - use cover_url property
+    if (video.cover_url) {
+        player.poster = video.cover_url;
+    } else if (video.coverUrl) {
+        player.poster = video.coverUrl; // Fallback
+    }
     
     // Set video info
     document.getElementById('modalVideoTitle').textContent = video.title || 'Untitled Video';
+    
+    // Use uploaded_at if available, fallback to created_at
+    const uploadTime = video.uploaded_at || video.created_at;
     document.getElementById('modalVideoMeta').innerHTML = `
         <span>${formatNumber(video.views || 0)} views</span>
         •
-        <span>${formatRelativeTime(video.created_at)}</span>
+        <span>${uploadTime ? formatRelativeTime(uploadTime) : 'Recently'}</span>
+        ${video.ai_generated ? '• <span><i class="fas fa-robot"></i> AI Generated</span>' : ''}
     `;
     
     // Set description
@@ -1913,8 +1973,10 @@ async function openVideoModal(video) {
         toggleBtn.style.display = 'none';
     }
     
-    // Load likes
-    await loadVideoLikes();
+    // Load likes if user is logged in
+    if (currentUser) {
+        await loadVideoLikes();
+    }
     
     // Load comments
     await loadComments(true);
@@ -1927,7 +1989,10 @@ async function openVideoModal(video) {
     document.body.style.overflow = 'hidden';
     
     // Play video
-    player.play().catch(() => {});
+    player.play().catch((error) => {
+        console.log('Video play failed:', error.message);
+        showNotification('Click play to start video', 'info');
+    });
     
     // Track view
     trackView(video.id);
@@ -1939,6 +2004,7 @@ function closeVideoModal() {
     
     player.pause();
     player.src = '';
+    player.poster = '';
     modal.classList.remove('show');
     document.body.style.overflow = '';
     currentVideo = null;
@@ -1959,7 +2025,6 @@ function toggleDescription() {
         toggleBtn.textContent = 'Show more';
     }
 }
-
 // =============== LIKES ===============
 async function loadVideoLikes() {
     if (!currentVideo || !currentUser) return;
