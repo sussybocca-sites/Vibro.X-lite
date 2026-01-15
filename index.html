@@ -2323,7 +2323,7 @@ async function postComment() {
     }
     
     try {
-        const response = await fetch(`/api/video-comments?videoId=${currentVideo.id}`, {
+        const response = await fetch(`/api/view-videos?videoId=${currentVideo.id}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             credentials: 'include',
@@ -2385,7 +2385,7 @@ async function likeComment(commentId, isLiked) {
     }
     
     try {
-        const response = await fetch(`/api/like-comment`, {
+        const response = await fetch(`/api/like-video`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             credentials: 'include',
@@ -2426,7 +2426,7 @@ async function loadRecommendedVideos() {
 
 async function trackView(videoId) {
     try {
-        await fetch(`/api/track-view?videoId=${videoId}`, {
+        await fetch(`/api/view-videos?videoId=${videoId}`, {
             method: 'POST',
             credentials: 'include'
         });
