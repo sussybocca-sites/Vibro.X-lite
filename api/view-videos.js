@@ -1,4 +1,4 @@
-// pages/api/view-videos.js (FINAL FIX - Returns array, not object)
+// pages/api/view-videos.js - UPDATED WITH TAB SUPPORT
 import { createClient } from '@supabase/supabase-js';
 import cookie from 'cookie';
 
@@ -105,7 +105,20 @@ export default async function handler(req, res) {
     if (req.method === 'GET') {
       console.log('📹 GET request - fetching videos');
       
-      const { statsOnly, ids, since, videoId: singleVideoId, incrementViews, sort = 'newest', limit = 12, offset = 0, search } = req.query;
+      const { 
+        statsOnly, 
+        ids, 
+        since, 
+        videoId: singleVideoId, 
+        incrementViews, 
+        sort = 'newest', 
+        limit = 12, 
+        offset = 0, 
+        search,
+        view = 'home',  // NEW: 'home', 'trending', 'history', 'liked', 'your-videos', 'watch-later'
+        category,
+        userId: specificUserId
+      } = req.query;
       
       // ========== STATS ONLY MODE (for polling/real-time updates) ==========
       if (statsOnly === 'true' && ids) {
@@ -249,8 +262,8 @@ export default async function handler(req, res) {
         return res.status(200).json(result);
       }
       
-      // ========== ALL VIDEOS REQUEST ==========
-      console.log('📹 Getting all videos');
+      // ========== ALL VIDEOS REQUEST WITH DIFFERENT VIEWS ==========
+      console.log(`📹 Getting videos for view: ${view}`);
       
       // Build query based on parameters
       let query = supabase
@@ -269,6 +282,8 @@ export default async function handler(req, res) {
           created_at,
           tags,
           ai_generated,
+          category,
+          privacy,
           users (
             id,
             email,
@@ -278,23 +293,105 @@ export default async function handler(req, res) {
           )
         `);
 
+      // Apply different filters based on view
+      switch(view) {
+        case 'home':
+          // Default view - show public videos
+          query = query.eq('privacy', 'public');
+          break;
+          
+        case 'trending':
+          // Trending videos - most views in last 7 days
+          const sevenDaysAgo = new Date();
+          sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+          
+          query = query
+            .eq('privacy', 'public')
+            .gte('created_at', sevenDaysAgo.toISOString())
+            .order('views', { ascending: false });
+          break;
+          
+        case 'history':
+          // User's watch history - requires authentication
+          if (!userId) {
+            return res.status(401).json({ error: 'Authentication required for watch history' });
+          }
+          
+          // We need to join with a watch_history table (we'll create this later)
+          // For now, return empty or show recently watched videos from a temporary table
+          query = query.eq('privacy', 'public').limit(0);
+          break;
+          
+        case 'liked':
+          // User's liked videos - requires authentication
+          if (!userId) {
+            return res.status(401).json({ error: 'Authentication required for liked videos' });
+          }
+          
+          // Get videos that user has liked
+          const { data: likedVideos } = await supabase
+            .from('likes')
+            .select('target_id')
+            .eq('user_email', userEmail)
+            .eq('target_type', 'video');
+          
+          if (likedVideos && likedVideos.length > 0) {
+            const likedVideoIds = likedVideos.map(like => like.target_id);
+            query = query.in('id', likedVideoIds).eq('privacy', 'public');
+          } else {
+            query = query.limit(0); // No liked videos
+          }
+          break;
+          
+        case 'your-videos':
+          // User's own videos - requires authentication
+          if (!userId) {
+            return res.status(401).json({ error: 'Authentication required for your videos' });
+          }
+          
+          query = query.eq('user_id', userId);
+          // Show all videos including private ones for the owner
+          break;
+          
+        case 'watch-later':
+          // User's watch later list - requires authentication
+          if (!userId) {
+            return res.status(401).json({ error: 'Authentication required for watch later' });
+          }
+          
+          // We need a watch_later table (we'll create this later)
+          query = query.eq('privacy', 'public').limit(0);
+          break;
+          
+        default:
+          // Default to home view
+          query = query.eq('privacy', 'public');
+      }
+      
+      // Apply category filter if specified
+      if (category && category !== 'all') {
+        query = query.eq('category', category);
+      }
+      
       // Apply search filter
       if (search) {
         query = query.or(`title.ilike.%${search}%,description.ilike.%${search}%,users.username.ilike.%${search}%`);
       }
 
-      // Apply sorting
-      switch (sort) {
-        case 'popular':
-          query = query.order('views', { ascending: false });
-          break;
-        case 'oldest':
-          query = query.order('created_at', { ascending: true });
-          break;
-        case 'newest':
-        default:
-          query = query.order('created_at', { ascending: false });
-          break;
+      // Apply sorting (if not already sorted by trending)
+      if (view !== 'trending') {
+        switch (sort) {
+          case 'popular':
+            query = query.order('views', { ascending: false });
+            break;
+          case 'oldest':
+            query = query.order('created_at', { ascending: true });
+            break;
+          case 'newest':
+          default:
+            query = query.order('created_at', { ascending: false });
+            break;
+        }
       }
 
       // Apply pagination
@@ -468,6 +565,8 @@ async function processVideoData(video, userEmail) {
       user: processedUser,
       comments: processedComments,
       tags: video.tags || [],
+      category: video.category || 'other',
+      privacy: video.privacy || 'public',
       ai_generated: video.ai_generated || false,
       mime_type: video.mime_type,
       size: video.size,
@@ -498,6 +597,8 @@ async function processVideoData(video, userEmail) {
       },
       comments: [],
       tags: video.tags || [],
+      category: video.category || 'other',
+      privacy: video.privacy || 'public',
       ai_generated: video.ai_generated || false,
       created_at: video.created_at
     };
